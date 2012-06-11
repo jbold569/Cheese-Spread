@@ -7,7 +7,9 @@
 
 from datetime import *
 import json
+import cherrypy
 
+argv = []
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
 class Tweet:
@@ -46,20 +48,6 @@ class Location:
 	
 	def __str__(self):
 		return "Location type: {0} at ({1}, {2})".format(self.type, self.lon, self.lat)
-		
-def main(argv):
-	query = raw_input("Enter your event keyword: ")
-	input  = raw_input("Enter the date of the event(dd-mm-yyyy): ")
-	tokens = input.split('-')
-	event_date = date(int(tokens[2]), int(tokens[1]), int(tokens[0]))
-	
-	desired_tweets = FilterByQuery(query, event_date, LoadTweets(argv[1:]))
-	
-	# dictionary form {"HashTag": (df,"HashTag"), ...}
-	hashtag_dfs = CountHashtags(desired_tweets)
-	
-	print hashtag_dfs
-	# mapping function
 
 # Returns a list of all tweets that meet the query criteria
 def FilterByQuery(query, date, tweets):
@@ -72,7 +60,7 @@ def FilterByQuery(query, date, tweets):
 			filtered_tweets.append(tweet)
 			#print tweet.contents
 			#print tweet.hashtags
-			print tweet.location
+			#print tweet.location
 
 	#print len(filtered_tweets)
 	return filtered_tweets
@@ -104,7 +92,40 @@ def CountHashtags(tweets):
 			dfs[hashtag] = (occurrences/len(tweets), hashtag)
 	
 	return dfs
+
+class Server(object):
+	@cherrypy.expose
+	def query(self, keyword, startDate):
+		global argv
+		argv.append("")
+		argv.append("geo.2012-01-31_23-55.txt")
+		argv.append("geo.2012-05-30_23-28.txt")
+		input  = startDate
+		tokens = input.split('-')
+		event_date = date(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+		desired_tweets = FilterByQuery(keyword, event_date, LoadTweets(argv[1:]))
 	
-if __name__ == "__main__":
-	import sys
-	main(sys.argv)
+		# dictionary form {"HashTag": (df,"HashTag"), ...}
+		hashtag_dfs = CountHashtags(desired_tweets)
+		hashtag_info = {}
+		
+		for tweet in desired_tweets:
+			for hashtag in tweet.hashtags:
+				if hashtag not in hashtag_info.keys():
+					hashtag_info[hashtag] = []
+				temp = {}
+				temp['loc'] = [tweet.location.lat, tweet.location.lon]
+				temp['date'] = str(tweet.date.day)+'-'+str(tweet.date.month)+'-'+str(tweet.date.year)
+				hashtag_info[hashtag].append(temp)
+				
+		#print hashtag_dfs
+		print hashtag_info
+		return json.dumps(hashtag_info, separators=(',',':'))
+
+cherrypy.quickstart(Server(), config="etc/web.conf")
+
+#if __name__ == "__main__":
+#	import sys
+#	global argv
+#	argv = sys.argv
+#	print argv
