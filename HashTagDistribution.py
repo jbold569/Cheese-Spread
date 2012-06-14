@@ -96,32 +96,39 @@ def CountHashtags(tweets):
 class Server(object):
 	@cherrypy.expose
 	def query(self, keyword, startDate):
-		global argv
-		argv.append("")
-		argv.append("geo.2012-01-31_23-55.txt")
-		argv.append("geo.2012-05-30_23-28.txt")
-		input  = startDate
-		tokens = input.split('-')
-		event_date = date(int(tokens[2]), int(tokens[1]), int(tokens[0]))
-		desired_tweets = FilterByQuery(keyword, event_date, LoadTweets(argv[1:]))
-	
-		# dictionary form {"HashTag": (df,"HashTag"), ...}
-		hashtag_dfs = CountHashtags(desired_tweets)
-		hashtag_info = {}
+		debugging = True
+		if not debugging:
+			import sys
+			input  = startDate
+			tokens = input.split('-')
+			event_date = date(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+			desired_tweets = FilterByQuery(keyword, event_date, LoadTweets(sys.argv[1:]))
 		
-		for tweet in desired_tweets:
-			for hashtag in tweet.hashtags:
-				if hashtag not in hashtag_info.keys():
-					hashtag_info[hashtag] = []
-				temp = {}
-				temp['loc'] = [tweet.location.lat, tweet.location.lon]
-				temp['date'] = str(tweet.date.day)+'-'+str(tweet.date.month)+'-'+str(tweet.date.year)
-				hashtag_info[hashtag].append(temp)
-				
-		#print hashtag_dfs
-		print hashtag_info
-		return json.dumps(hashtag_info, separators=(',',':'))
-
+			# dictionary form {"HashTag": (df,"HashTag"), ...}
+			hashtag_dfs = CountHashtags(desired_tweets)
+			hashtag_info = {}
+			
+			for tweet in desired_tweets:
+				for hashtag in tweet.hashtags:
+					if hashtag not in hashtag_info.keys():
+						hashtag_info[hashtag] = []
+					temp = {}
+					temp['hashtag'] = hashtag
+					temp['loc'] = [tweet.location.lat, tweet.location.lon]
+					temp['date'] = str(tweet.date.day)+'-'+str(tweet.date.month)+'-'+str(tweet.date.year)
+					hashtag_info[hashtag].append(temp)
+					
+			#print hashtag_dfs
+			print hashtag_info.values()
+			data = {}
+			data['tags'] = hashtag_info.values()
+			return json.dumps(data, separators=(',',':'))
+		else:
+			f = open("test", 'r')
+			data = eval(f.read())
+			f.close()
+			return json.dumps(data, separators=(',',':'))
+			
 cherrypy.quickstart(Server(), config="etc/web.conf")
 
 #if __name__ == "__main__":
