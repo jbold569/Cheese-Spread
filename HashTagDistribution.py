@@ -5,52 +5,16 @@
 #
 #
 
+from pymongo import *
 from datetime import *
 import json
 import cherrypy
 
 argv = []
-months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
-class Tweet:
-	def __init__(self, tweet):
-		try:
-			self.contents = tweet['text']
-			#This is a list of hashtags format [{"indices":[x,y], "text": "blah"}, ... ]
-			self.hashtags = []
-			for tag in tweet['entities']['hashtags']:
-				self.hashtags.append(tag['text'])
-			#This will be a date object
-			tokens = tweet['created_at'].split(' ')
-			self.date = date(int(tokens[5]), months[tokens[1]], int(tokens[2]))
-			self.location = Location(coord = tweet['coordinates'])
-			if self.location.lon == 0 and self.location.lat == 0:
-				self.valid = False
-			else:
-				self.valid = True
-		except KeyError:
-			self.valid = False
-			#print "Missing data from tweet"
-
-	def __str__(self):
-		pass		
-
-class Location:
-	def __init__(self,lon=0,lat=0, coord = None):
-		if coord:
-			self.type = coord['type']
-			self.lon = coord['coordinates'][0]
-			self.lat = coord['coordinates'][1]
-		else:
-			self.type = 'Point'
-			self.lon = lon
-			self.lat = lat
-	
-	def __str__(self):
-		return "Location type: {0} at ({1}, {2})".format(self.type, self.lon, self.lat)
-
+# Deprecated due ot Mongo
 # Returns a list of all tweets that meet the query criteria
-def FilterByQuery(query, date, tweets):
+def FilterByQuery(query, date):
 	filtered_tweets = []
 	
 	for tweet in tweets:
@@ -65,74 +29,48 @@ def FilterByQuery(query, date, tweets):
 	#print len(filtered_tweets)
 	return filtered_tweets
 	
-def LoadTweets(filenames):
-	tweets = []
-	for filename in filenames:
-		file = open(filename)
-		# List of tweet objects
-		for line in file:
-			tweets.append(Tweet(json.loads(line)))
-	return tweets
 
-# Calculates the Document frequencies of all hashtags that appear with the query
-def CountHashtags(tweets):
-	dfs = {}
-	for tweet in tweets:
-		# Check to see if the tag is already in the dictionary
-		# Loop through all tweets to count the number of occurrences
-		# calculate the df
-		for hashtag in tweet.hashtags:
-			if hashtag in dfs.keys():
-				continue
-			occurrences = 0.0
-			for t in tweets:
-				if t.valid and hashtag in t.hashtags:
-					occurrences += 1
-			#print hashtag + ": " + str(occurrences)
-			dfs[hashtag] = (occurrences/len(tweets), hashtag)
-	
-	return dfs
+
 
 class Server(object):
 	@cherrypy.expose
 	def query(self, keyword, startDate):
-		debugging = True
-		if not debugging:
-			import sys
-			input  = startDate
-			tokens = input.split('-')
-			event_date = date(int(tokens[2]), int(tokens[1]), int(tokens[0]))
-			desired_tweets = FilterByQuery(keyword, event_date, LoadTweets(sys.argv[1:]))
+		input  = startDate
+		tokens = input.split('-')
+		event_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
 		
-			# dictionary form {"HashTag": (df,"HashTag"), ...}
-			hashtag_dfs = CountHashtags(desired_tweets)
-			hashtag_info = {}
-			
-			for tweet in desired_tweets:
-				for hashtag in tweet.hashtags:
-					if hashtag not in hashtag_info.keys():
-						hashtag_info[hashtag] = []
-					temp = {}
-					temp['hashtag'] = hashtag
-					temp['loc'] = [tweet.location.lat, tweet.location.lon]
-					temp['date'] = str(tweet.date.day)+'-'+str(tweet.date.month)+'-'+str(tweet.date.year)
-					hashtag_info[hashtag].append(temp)
-					
-			#print hashtag_dfs
-			print hashtag_info.values()
-			data = {}
-			data['tags'] = hashtag_info.values()
-			return json.dumps(data, separators=(',',':'))
-		else:
-			f = open("test", 'r')
-			data = eval(f.read())
-			f.close()
-			return json.dumps(data, separators=(',',':'))
-			
+		# Mongo sequence
+		connection = Connection()
+		db = connection.GeoTaggedTweets
+		DK_index = db.DateKeywordCollection
+		
+		
+		desired_tweets = []
+		results = DK_index.find({'keywords': keyword.lower(), 'date' : {'$gte': event_date}})
+		print results.count()
+		for tweet in results:
+			tweet
+			desired_tweets.append(tweet)
+		#print desired_tweets
+		# dictionary form {"HashTag": (df,"HashTag"), ...}
+		#hashtag_dfs = CountHashtags(desired_tweets)
+		hashtag_info = {}
+		
+		for tweet in desired_tweets:
+			#print tweet
+			for hashtag in tweet['hashtags']:
+				#print hashtag
+				if hashtag not in hashtag_info.keys():
+					hashtag_info[hashtag] = []
+				temp = {}
+				temp['hashtag'] = hashtag
+				temp['loc'] = tweet['location']['lat'], tweet['location']['lng']
+				temp['date'] = str(tweet['date'].day)+'-'+str(tweet['date'].month)+'-'+str(tweet['date'].year)
+				hashtag_info[hashtag].append(temp)
+		#print hashtag_info		
+		data = {}
+		data['tags'] = hashtag_info.values()
+		return json.dumps(data, separators=(',',':'))
+		
 cherrypy.quickstart(Server(), config="etc/web.conf")
 
-#if __name__ == "__main__":
-#	import sys
-#	global argv
-#	argv = sys.argv
-#	print argv
