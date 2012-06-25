@@ -5,6 +5,7 @@
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 		
 		<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
+		<link type="text/css" href="css/style.css" rel="stylesheet" />
 		<script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
 		<script type="text/javascript" src="js/jquery-ui-1.8.21.custom.min.js"></script>
 		
@@ -17,33 +18,35 @@
 	</head>
 	
 	<body>
-		<div id="UserInput">
-			<form>	
-				<center>
-					Keyword: <input type="text" name="Keyword" id="query" /> 
-					&nbsp Date: <input type="text" name="date" id="startDate" />
-					&nbsp <input type="button" value="Search" id="search" /><br />
-				</center>
-			</form>
+		<div id="page_wrap">
+			<div id="UserInput">
+				<form>	
+					<center>
+						Keyword: <input type="text" name="Keyword" id="query" /> 
+						&nbsp Start Date: <input type="text" name="startDate" id="startDate" />
+						&nbsp End Date: <input type="text" name="endDate" id="endDate" />
+						&nbsp <input type="button" value="Search" id="search" /><br />
+					</center>
+				</form>
+			</div>
+			
+			<div id="map" style="margin:0 auto; width:500px; height:500px">
+				<script src="js/map.js"></script>
+			</div>
+			
+			<div id="legend">
+				<p>This is where the legend will go!</p>
+				<form id="checks">
+				</form>
+			</div>
+			
+			<div id="timeline">
+			</div>
+			
+			<div id="summaries">
+				<p>This is where we will summarize the events!</p>
+			</div>
 		</div>
-		
-		<div id="map" style="margin:0 auto; width:500px; height:500px">
-			<script src="js/map.js"></script>
-		</div>
-		
-		<div id="legend">
-			<p>This is where the legend will go!</p>
-			<form id="checks">
-			</form>
-		</div>
-		
-		<div id="timeline">
-		</div>
-		
-		<div id="summaries">
-			<p>This is where we will summarize the events!</p>
-		</div>
-	
 	</body>
 
 </html>

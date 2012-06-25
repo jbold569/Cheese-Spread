@@ -14,7 +14,7 @@ months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep'
 class Tweet:
 	def __init__(self, tweet):
 		try:
-			self.id_str = str(tweet['id'])
+			self.id_str = tweet['id_str']
 			self.contents = tweet['text'].lower()
 			#This is a list of hashtags format [{"indices":[x,y], "text": "blah"}, ... ]
 			self.hashtags = []
@@ -36,6 +36,7 @@ class Tweet:
 		except KeyError as e:
 			self.valid = False
 			print "Missing data from tweet: " + str(e)
+			print tweet.keys()
 		
 	def __str__(self):
 		return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
@@ -61,22 +62,24 @@ def PopulateDB(tweets):
 	db = connection.GeoTaggedTweets
 	DK_index = db.DateKeywordCollection
 	H_index = db.HashtagCollection
-	DK_index.create_index([('date', DESCENDING), ('keywords', DESCENDING)])
+	DK_index.create_index([('date', DESCENDING), ('keywords', ASCENDING)])
 	H_index.create_index('hashtags')
 		
 	for tweet in tweets:
-		if tweet.valid:
-			DK_index.insert(tweet.toDictionary())
-			H_index.insert(tweet.toDictionary())
+		DK_index.insert(tweet.toDictionary())
+		H_index.insert(tweet.toDictionary())
 		
 def LoadTweets(filenames):
-	tweets = []
 	for filename in filenames:
+		tweets = []
 		file = open(filename)
 		# List of tweet objects
 		for line in file:
-			tweets.append(Tweet(json.loads(line)))
-	PopulateDB(tweets)
+			temp = Tweet(json.loads(line))
+			if temp.valid:
+				tweets.append(temp)
+		file.close()
+		PopulateDB(tweets)
 	
 # Calculates the Document frequencies of all hashtags that appear with the query
 def CountHashtags(tweets):
