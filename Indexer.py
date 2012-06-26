@@ -17,30 +17,51 @@ class Tweet:
 	def __init__(self, tweet):
 		global DEBUGGING
 		try:
+			# Information about the tweet
 			self.id = tweet['id']
+			self.retweet_count = tweet['retweet_count']
 			self.contents = tweet['text'].lower()
-			#This is a list of hashtags format [{"indices":[x,y], "text": "blah"}, ... ]
-			self.hashtags = []
 			self.keywords = list(set(self.contents.split()))
+			
+			self.urls = []
+			self.user_mentions = []
+			self.hashtags = []
+			
+			for url in tweet['entities']['urls']:
+				self.urls.append(url['expanded_url']
+			for mention in tweet['entities']['user_mentions']:
+				self.user_mentions.append(mention['id'])
 			for tag in tweet['entities']['hashtags']:
 				self.hashtags.append(tag['text'])
+			
 			#This will be a date object
 			tokens = tweet['created_at'].split(' ')
-			self.date = datetime(int(tokens[5]), months[tokens[1]], int(tokens[2]))
+			time = tokens[3].split(':')
+			self.date = datetime(int(tokens[5]), months[tokens[1]], int(tokens[2]), int(time[0]), int(time[1]), int(time[2]))
+			
 			if tweet['coordinates']:
-				self.location = {'type': tweet['coordinates']['type'], 'lat': tweet['coordinates']['coordinates'][1], 'lng': tweet['coordinates']['coordinates'][0]}
-				if self.location['lng'] == 0 and self.location['lat'] == 0:
-					self.valid = False
-				else:
-					self.valid = True
-					#print "Tweet: " + self.id_str + " loaded."
+				self.location = {'type': tweet['coordinates']['type'], 'shape': None, 'lat': tweet['coordinates']['coordinates'][1], 'lng': tweet['coordinates']['coordinates'][0]}
+			elif tweet['place']:
+				shape = []
+				for coord in tweet['place']['coordinates']:
+					shape.append({'lat': coord[1], 'lng': coord[0]})
+				self.location = {'type': tweet['place']['type'], 'shape': shape, 'lat': None, 'lng': None }
 			else:
 				self.valid = False
+				
+				
+			# Information about the user
+			self.user = tweet['user']['id']
+			self.follower_count = tweet['user']['follower_count']
+			
+				
+			
 		except KeyError as e:
 			self.valid = False
 			if DEBUGGING:
 				print "Missing data from tweet: " + str(e)
 				print tweet.keys()		
+	
 	def __str__(self):
 		return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
 	
@@ -54,7 +75,12 @@ class Tweet:
 			'date' : self.date,
 			'location' : self.location,
 			'valid' : self.valid,
-			'keywords' : self.keywords
+			'keywords' : self.keywords,
+			'urls': self.urls,
+			'retweet_count': self.retweet_count,
+			'user_mentions': self.user_mentions,
+			'user': self.user,
+			'follower_count': self.follower_count
 		}
 			
 		return temp_dict
@@ -98,6 +124,7 @@ def PopulateDB(tweets):
 			if DEBUGGING:
 				print "Tweet id: " + str(tweet.id) + " already loaded into HashtagCollection, skipping."
 		if counter%1000 == 0:
+			print '\n'
 			print str(counter) + " out of " + str(len(tweets)) + " completed."
 			print str(loaded) + " tweets have been loaded."
 			print str(duplicate) + " tweets were already loaded."
@@ -113,9 +140,14 @@ def LoadTweets(filenames):
 		print "Loading: " + filename
 		# List of tweet objects
 		for line in file:
-			temp = Tweet(json.loads(line))
-			if temp.valid:
-				tweets.append(temp)
+			try:
+				temp = Tweet(json.loads(line))
+				if temp.valid:
+					tweets.append(temp)
+			except:
+				if DEBUGGING:
+					print "Invalid json: " + line
+					continue
 		file.close()
 		PopulateDB(tweets)
 		log = open("log", 'a')
