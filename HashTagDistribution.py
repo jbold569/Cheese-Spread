@@ -7,10 +7,9 @@
 
 from pymongo import *
 from datetime import *
+import EventTracker as et
 import json
 import cherrypy
-
-argv = []
 
 # Deprecated due ot Mongo
 # Returns a list of all tweets that meet the query criteria

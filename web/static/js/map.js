@@ -169,6 +169,7 @@ function CreateSlider() {
 			min: 0,
 			max: TimeInDays(new Date())-TimeInDays(StartDate),
 			value: 0,
+			animate: "slow",
 			slide: function( event, ui ) {
 				FilterStartDate = new Date(StartDate.getTime()+ui.value*1000*60*60*24);
 				FilterEndDate = new Date(FilterStartDate.getTime()+Span*1000*60*60*24);
