@@ -27,29 +27,34 @@ def FilterByQuery(query, date):
 			#print tweet.location
 
 	#print len(filtered_tweets)
-	return filtered_tweets
+	#return filtered_tweets
 	
-
 
 
 class Server(object):
 	@cherrypy.expose
-	def query(self, keyword, startDate):
-		input  = startDate
-		tokens = input.split('-')
-		event_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+	def query(self, keyword, startDate, endDate):
+		print keyword
+		print startDate
+		print endDate
 		
+		start  = startDate
+		end = endDate
+		tokens = start.split('-')
+		event_start_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+		tokens = end.split('-')
+		event_end_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
 		# Mongo sequence
-		connection = Connection()
+		connection = Connection(host = 'hamm.cse.tamu.edu')
 		db = connection.GeoTaggedTweets
 		DK_index = db.DateKeywordCollection
 		
 		
 		desired_tweets = []
-		results = DK_index.find({'keywords': keyword.lower(), 'date' : {'$gte': event_date}})
+		results = DK_index.find({'keywords': keyword.lower(), 'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}}, limit = 500)
 		print results.count()
 		for tweet in results:
-			tweet
+			#print tweet
 			desired_tweets.append(tweet)
 		#print desired_tweets
 		# dictionary form {"HashTag": (df,"HashTag"), ...}
@@ -69,7 +74,11 @@ class Server(object):
 				hashtag_info[hashtag].append(temp)
 		#print hashtag_info		
 		data = {}
-		data['tags'] = hashtag_info.values()
+		data['tags'] = []
+		tags = hashtag_info.keys()
+		sorted_tags = sorted(tags, key = lambda hashtag: len(hashtag_info[hashtag]), reverse=True)
+		for tag in sorted_tags:
+			data['tags'].append(hashtag_info[tag])
 		return json.dumps(data, separators=(',',':'))
 		
 cherrypy.quickstart(Server(), config="etc/web.conf")

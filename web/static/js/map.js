@@ -5,7 +5,7 @@ $(document).ready(Initialize);
 var Hashtags = new Array();
 var COLORS = ["red", "blue", "yellow", "green", "black"];
 var legend_counter = 0;
-var Map, StartDate, FilterDate;
+var Map, StartDate, EndDate, FilterStartDate, FilterEndDate, slider, Span;
 
 function daysBetween ( date1, date2 ) {
 	//Get 1 day in milliseconds
@@ -16,7 +16,7 @@ function daysBetween ( date1, date2 ) {
 	var date2_ms = date2.getTime();
 
 	// Calculate the difference in milliseconds
-	var difference_ms = date2_ms - date1_ms;
+	var difference_ms = Math.abs(date2_ms - date1_ms);
     
 	// Convert back to days and return
 	return Math.round(difference_ms/one_day); 
@@ -35,7 +35,7 @@ function HashtagObject(tag_data, color) {
 	this.location = new google.maps.Circle({
 				center : new google.maps.LatLng(tag_data.loc[0], tag_data.loc[1]),
 				fillColor : color,
-				radius : 10000,
+				radius : 2000,
 				map: null
 	});
 }
@@ -45,13 +45,13 @@ function HashtagObject(tag_data, color) {
 function Redraw() {
 	for(i in Hashtags[legend_counter]) {
 		for(j in Hashtags[legend_counter][i]) {
-			if(Hashtags[legend_counter][i][j].visible == true && Hashtags[legend_counter][i][j].date >= FilterDate) {
+			if(Hashtags[legend_counter][i][j].visible == true && Hashtags[legend_counter][i][j].date >= FilterStartDate && Hashtags[legend_counter][i][j].date <= FilterEndDate) {
 				console.log("Redrawing " + Hashtags[legend_counter][i][j].hashtag + " because " + Hashtags[legend_counter][i][j].visible);
 				Hashtags[legend_counter][i][j].location.setMap(Map);
-				console.log(Hashtags[legend_counter][i][j].location)
+				//console.log(Hashtags[legend_counter][i][j].location)
 			}
 			else {
-				console.log("Erasing " + Hashtags[legend_counter][i][j].hashtag + " because " + Hashtags[legend_counter][i][j].visible);
+				//console.log("Erasing " + Hashtags[legend_counter][i][j].hashtag + " because " + Hashtags[legend_counter][i][j].visible);
 				Hashtags[legend_counter][i][j].location.setMap(null);
 			}
 		}
@@ -64,7 +64,7 @@ function ClearMap() {
 		for(j in Hashtags[legend_counter][i]) {
 		// TODO: Check the date
 			if(Hashtags[legend_counter][i][j].visible == true){
-				console.log("Erasing " + Hashtags[legend_counter][i][j].hashtag + " because " + Hashtags[legend_counter][i][j].visible);
+				//console.log("Erasing " + Hashtags[legend_counter][i][j].hashtag + " because " + Hashtags[legend_counter][i][j].visible);
 				Hashtags[legend_counter][i][j].location.setMap(null);
 				Hashtags[legend_counter][i][j].visible = false;
 			}
@@ -98,17 +98,21 @@ function LoadHashtags(raw_data) {
 function PopulateLegend() {
 	var legend = "<form><p>Legend:</p>", i;
 	var i, x=Hashtags[legend_counter].length;
-	console.log(x);
+	//console.log(x);
 	console.log(Hashtags[legend_counter]);
 	for(i=0; i<x; i++) {
 		console.log(legend_counter);
-		legend = legend+ "<input type=\"checkbox\" class=\"filter\" name=\"hashtag\" value=\"" +
+		legend = legend+ "<input type=\"checkbox\" name=\"hashtag\" value=\"" +
 		Hashtags[legend_counter][i][0].hashtag +
-		"\" /> #" + Hashtags[legend_counter][i][0].hashtag + " &nbsp\n";
+		"\" /> <b id=\"filter"+i+"\">#</b>" + Hashtags[legend_counter][i][0].hashtag + "&nbsp\n";
 	}
 	legend = legend + "&nbsp<input type=\"button\" value=\"Previous\" id=\"previous\"><input type=\"button\" value=\"Next\" id=\"next\">";
 	legend = legend + "</form>";
 	$("#legend").html(legend);
+	for(i=0; i<x; i++) {
+		$("#filter"+i).css("color",COLORS[i]);
+		$("#filter"+i).css("font-weight","bold");
+	}
 	
 	// Bind click events for the new forms
 	$("input#next").click(function () {
@@ -122,7 +126,7 @@ function PopulateLegend() {
 	
 	$("input#previous").click(function () {
 		ClearMap();
-		console.log("length: " + Hashtags.length);
+		//console.log("length: " + Hashtags.length);
 		if(legend_counter-1<0)
 			legend_counter = Hashtags.length-1;
 		else
@@ -152,44 +156,59 @@ function PopulateLegend() {
 }
 
 function CreateSlider() {
+	$("#timeline").html("<form>Life Span of Hashtag:<input type=\"text\" id=\"period\" /></form><div id=\"slider\"></div>").change( function () {
+		Span = parseInt($("#period").val());
+		FilterEndDate = new Date(FilterStartDate.getTime()+Span*1000*60*60*24);
+		console.log(FilterEndDate);
+	});
 	$(function () {
 		console.log("Today: " + new Date());
 		console.log("Query: " + StartDate);
 		console.log("Difference: " +daysBetween(StartDate, new Date()));
-		$("#timeline").slider({
+		$("#slider").slider({
 			min: 0,
 			max: TimeInDays(new Date())-TimeInDays(StartDate),
+			value: 0,
 			slide: function( event, ui ) {
-				FilterDate = new Date(StartDate.getTime()+ui.value*1000*60*60*24);
+				FilterStartDate = new Date(StartDate.getTime()+ui.value*1000*60*60*24);
+				FilterEndDate = new Date(FilterStartDate.getTime()+Span*1000*60*60*24);
 				Redraw();
 			}
 		});
 	});
 }
 
-
-
 function Query() {
+	ClearMap();
+	Hashtags = new Array();
 	var keywords = $("input#query").val();
-	var startDate = $("input#startDate").val();
+	var QueryStartDate = $("input#startDate").val();
+	var QueryEndDate = $("input#endDate").val();
 	console.log(keywords);
-	var tokens = startDate.split("-");
+	var tokens = QueryStartDate.split("-");
 	StartDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
-	FilterDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
-	console.log(StartDate);
-	$.getJSON("http://localhost:8080/query/"+keywords+"/"+startDate, function(data, testStatus) {
+	FilterStartDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
+	FilterEndDate =  new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
+	console.log(QueryStartDate);
+	$.getJSON("http://localhost:8080/query/"+keywords+"/"+QueryStartDate+"/"+QueryEndDate, function(data, testStatus) {
 		LoadHashtags(data.tags);
-		PopulateLegend();
-		CreateSlider();
+		if(Hashtags.length == 0)
+			alert("No results found");
+		else {
+			PopulateLegend();
+			CreateSlider();
+		}
 	});
 }
 
 
 function Initialize() {
 	$("#startDate").datepicker({dateFormat: "dd-mm-yy"});
+	$("#endDate").datepicker({dateFormat: "dd-mm-yy"});
 	var myOptions = {
 		center: new google.maps.LatLng( 0, 0),
 		zoom: 1,
+		disableDefaultUI: true,
 		mapTypeId: google.maps.MapTypeId.ROADMAP
 	};
 	Map = new google.maps.Map($("#map")[0],

@@ -1,0 +1,12 @@
+html { background: #ededed; }
+
+#page_wrap {
+	margin: 0 auto;
+	width: 800px;
+}
+
+.filter0 { background: red; }
+.filter1 { background: blue; }
+.filter2 { background: yellow; }
+.filter3 { background: green; }
+.filter4 { background: black; }

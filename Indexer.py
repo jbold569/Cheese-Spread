@@ -40,8 +40,7 @@ class Tweet:
 			self.valid = False
 			if DEBUGGING:
 				print "Missing data from tweet: " + str(e)
-				print tweet.keys()
-		
+				print tweet.keys()		
 	def __str__(self):
 		return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
 	
