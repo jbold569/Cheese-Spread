@@ -9,12 +9,15 @@ from pymongo import *
 from datetime import *
 import json
 
+DEBUGGING = False
+REINDEX = False
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
 class Tweet:
 	def __init__(self, tweet):
+		global DEBUGGING
 		try:
-			self.id_str = str(tweet['id'])
+			self.id = tweet['id']
 			self.contents = tweet['text'].lower()
 			#This is a list of hashtags format [{"indices":[x,y], "text": "blah"}, ... ]
 			self.hashtags = []
@@ -35,7 +38,9 @@ class Tweet:
 				self.valid = False
 		except KeyError as e:
 			self.valid = False
-			print "Missing data from tweet: " + str(e)
+			if DEBUGGING:
+				print "Missing data from tweet: " + str(e)
+				print tweet.keys()
 		
 	def __str__(self):
 		return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
@@ -44,7 +49,7 @@ class Tweet:
 	# different keywords
 	def toDictionary(self):
 		temp_dict = {
-			'id_str' : self.id_str,
+			'_id' : self.id,
 			'contents' : self.contents,
 			'hashtags' : self.hashtags,
 			'date' : self.date,
@@ -54,30 +59,72 @@ class Tweet:
 		}
 			
 		return temp_dict
-		
 
-def PopulateDB(tweets):
+DK_index = None
+H_index = None
+		
+def InitDB():
+	global DK_index, H_index
 	connection = Connection()
+        print "Connecting to DB"
 	db = connection.GeoTaggedTweets
-	DK_index = db.DateKeywordCollection
-	H_index = db.HashtagCollection
-	DK_index.create_index([('date', DESCENDING), ('keywords', DESCENDING)])
-	H_index.create_index('hashtags')
-		
+        DK_index = db.DateKeywordCollection
+        H_index = db.HashtagCollection
+        if REINDEX:
+		DK_index.ensure_index('date')
+		DK_index.ensure_index('keywords')
+           	DK_index.reindex()
+		H_index.ensure_index('hashtags')
+		H_index.reindex()
+	
+def PopulateDB(tweets):
+	global DK_index, H_index
+	counter = 0
+	loaded = 0
+	duplicate = 0
 	for tweet in tweets:
-		if tweet.valid:
+		counter += 1
+		if DK_index.find({'_id':tweet.id}).count() == 0:
 			DK_index.insert(tweet.toDictionary())
+			#print "Tweet id:" + str(tweet.id) + " loaded into DateKeywordCollection."
+			loaded += 1
+		else:
+			duplicate += 1
+			if DEBUGGING:
+				print "Tweet id:" + str(tweet.id) + " already loaded into DateKeywordCollection, skipping."
+		if H_index.find({'_id':tweet.id}).count() == 0:
 			H_index.insert(tweet.toDictionary())
-		
+			#print "Tweet id:" + str(tweet.id) + " loaded into HashtagCollection."
+		else:
+			if DEBUGGING:
+				print "Tweet id: " + str(tweet.id) + " already loaded into HashtagCollection, skipping."
+		if counter%1000 == 0:
+			print str(counter) + " out of " + str(len(tweets)) + " completed."
+			print str(loaded) + " tweets have been loaded."
+			print str(duplicate) + " tweets were already loaded."
+
 def LoadTweets(filenames):
-	tweets = []
+	InitDB()
+	counter = 0
 	for filename in filenames:
+		if filename[-1] == 'z':
+			continue
+		tweets = []
 		file = open(filename)
+		print "Loading: " + filename
 		# List of tweet objects
 		for line in file:
-			tweets.append(Tweet(json.loads(line)))
-	PopulateDB(tweets)
-	
+			temp = Tweet(json.loads(line))
+			if temp.valid:
+				tweets.append(temp)
+		file.close()
+		PopulateDB(tweets)
+		log = open("log", 'a')
+		log.write(filename + " loaded.\n")
+		log.close()
+		counter += 1
+		print str(counter) + " out of " + str(len(filenames)) + " loaded."
+
 # Calculates the Document frequencies of all hashtags that appear with the query
 def CountHashtags(tweets):
 	dfs = {}
@@ -97,5 +144,11 @@ def CountHashtags(tweets):
 	return dfs
 
 if __name__ == '__main__':
-	import sys
-	LoadTweets(sys.argv[1:])
+	import os, sys
+	if sys.argv[1] == 'True':
+		DEBUGGING = True
+	filenames = []
+	for path, names, files in os.walk('.//tweets//'+sys.argv[2]):
+		for file in files:
+			filenames.append(os.path.join(path, file))
+	LoadTweets(filenames)
