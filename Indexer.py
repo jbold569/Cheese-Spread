@@ -13,6 +13,30 @@ DEBUGGING = False
 REINDEX = False
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
+def WordFilter(words):
+	import re
+	punc = re.compile('[%s]'%re.escape(string.punctuation))
+	
+	keywords = []
+	file = open("stopwords\\lextek.txt", 'r')
+	stopwords = file.read().split()
+	file.close()
+	
+	for word in words:
+		# ignore unicode
+		if '\u' in word:
+			continue
+			
+		# ignore mentions
+		if word[0] == '@':
+			continue
+		# ignore stopwords
+		if word in stopwords:
+			continue
+			
+		temp_word = regex.sub('',word)
+	
+		
 class Tweet:
 	def __init__(self, tweet):
 		global DEBUGGING
@@ -21,7 +45,7 @@ class Tweet:
 			self.id = tweet['id']
 			self.retweet_count = tweet['retweet_count']
 			self.contents = tweet['text'].lower()
-			self.keywords = list(set(self.contents.split()))
+			self.keywords = word_filter(self.contents.split())
 			
 			self.urls = []
 			self.user_mentions = []

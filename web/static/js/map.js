@@ -182,16 +182,15 @@ function CreateSlider() {
 function Query() {
 	ClearMap();
 	Hashtags = new Array();
-	var keywords = $("input#query").val();
 	var QueryStartDate = $("input#startDate").val();
 	var QueryEndDate = $("input#endDate").val();
-	console.log(keywords);
 	var tokens = QueryStartDate.split("-");
 	StartDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
 	FilterStartDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
 	FilterEndDate =  new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
 	console.log(QueryStartDate);
-	$.getJSON("http://localhost:8080/query/"+keywords+"/"+QueryStartDate+"/"+QueryEndDate, function(data, testStatus) {
+	console.log(QueryEndDate);
+	$.getJSON("http://localhost:8080/QueryEvents/"+QueryStartDate+"/"+QueryEndDate, function(data, testStatus) {
 		LoadHashtags(data.tags);
 		if(Hashtags.length == 0)
 			alert("No results found");

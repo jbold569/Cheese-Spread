@@ -31,8 +31,48 @@ def FilterByQuery(query, date):
 
 
 class Server(object):
+	results = []
+	counter = 0
+	
 	@cherrypy.expose
-	def query(self, keyword, startDate, endDate):
+	def QueryEvents(self, startDate, endDate):
+		print startDate
+		print endDate
+		
+		start  = startDate
+		end = endDate
+		tokens = start.split('-')
+		event_start_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+		tokens = end.split('-')
+		event_end_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+		# Mongo sequence
+		connection = Connection(host = 'hamm.cse.tamu.edu')
+		db = connection.GeoTaggedTweets
+		DK_index = db.DateKeywordCollection
+		
+		# Format {date: [tweet1, tweet2, ..], ...} 
+		desired_tweets = {}
+		temp = event_start_date
+		results = DK_index.find({'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}}, limit = 5000)
+		print results.count(with_limit_and_skip=True)
+		for tweet in results:
+			day = event_start_date + timedelta(days = (tweet['date']-event_start_date).days)
+			if day not in desired_tweets.keys():
+				desired_tweets[day] = []
+			desired_tweets[day].append(tweet)
+	
+		#print desired_tweets
+		# dictionary form {"HashTag": (df,"HashTag"), ...}
+		#hashtag_dfs = CountHashtags(desired_tweets)
+		# Structure will be a 2D array, first dimension is divided by day and the 
+		# second is divided by event
+		results = et.FindEvents(desired_tweets)
+		
+		
+		return None
+	
+	@cherrypy.expose
+	def QueryHashtags(self, keyword, startDate, endDate):
 		print keyword
 		print startDate
 		print endDate
