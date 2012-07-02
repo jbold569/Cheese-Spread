@@ -245,6 +245,8 @@ if __name__ == '__main__':
 	import os, sys
 	if sys.argv[1] == 'True':
 		DEBUGGING = True
+	if sys.argv[2] == 'True':
+		REINDEX = True
 	filenames = []
 	for path, names, files in os.walk('.//tweets//'+sys.argv[2]):
 		for file in files:
