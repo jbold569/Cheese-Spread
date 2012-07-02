@@ -57,7 +57,7 @@ class Tweet:
 			self.hashtags = []
 			
 			for url in tweet['entities']['urls']:
-				self.urls.append(url['expanded_url']
+				self.urls.append(url['expanded_url'])
 			for mention in tweet['entities']['user_mentions']:
 				self.user_mentions.append(mention['id'])
 			for tag in tweet['entities']['hashtags']:
