@@ -45,8 +45,13 @@ class Tweet:
 			self.id = tweet['id']
 			self.retweet_count = tweet['retweet_count']
 			self.contents = tweet['text'].lower()
-			self.keywords = word_filter(self.contents.split())
+			self.keywords = list(set(word_filter(self.contents.split())))
 			
+			self.keyword_counts = {}
+			filtered_words = word_filter(self.contents.split())
+			for word in self.keywords:
+				self.keyword_counts[word] = filtered_words.count(word)
+				
 			self.urls = []
 			self.user_mentions = []
 			self.hashtags = []
@@ -111,23 +116,38 @@ class Tweet:
 
 DK_index = None
 H_index = None
+O_index = None
+C_index = None
 		
 def InitDB():
-	global DK_index, H_index
+	global DK_index, H_index, O_index, C_index
 	connection = Connection()
-        print "Connecting to DB"
+	print "Connecting to DB"
 	db = connection.GeoTaggedTweets
-        DK_index = db.DateKeywordCollection
-        H_index = db.HashtagCollection
-        if REINDEX:
+	
+	DK_index = db.DateKeywordCollection
+	H_index = db.HashtagCollection
+	O_index = db.OccurrencesCollection
+	C_index = db.KeywordCountCollection
+	
+	if REINDEX:
 		DK_index.ensure_index('date')
 		DK_index.ensure_index('keywords')
-           	DK_index.reindex()
+		DK_index.reindex()
 		H_index.ensure_index('hashtags')
 		H_index.reindex()
-	
+		O_index.ensure_index('keyword', unique=True)
+		O_index.ensure_index('date')
+		O_index.reindex()
+		C_index.ensure_index('date', unique=True)
+		C_index.reindex()
+
+# Structure {word: count, ...}
+keyword_occurences = {}
+total_keywords = 0
+		
 def PopulateDB(tweets):
-	global DK_index, H_index
+	global DK_index, H_index, keyword_occurrences, total_keywords
 	counter = 0
 	loaded = 0
 	duplicate = 0
@@ -152,10 +172,21 @@ def PopulateDB(tweets):
 			print str(counter) + " out of " + str(len(tweets)) + " completed."
 			print str(loaded) + " tweets have been loaded."
 			print str(duplicate) + " tweets were already loaded."
-
+		
+		for word, count in tweet.keyword_counts.items():
+			if word not in keyword_occurrences.keys():
+				keyword_occurrences[word] = count
+			else:
+				keyword_occurrences[word] += count
+			total_keywords += count
+				
 def LoadTweets(filenames):
 	InitDB()
 	counter = 0
+	tokens = filenames[0].split('.')
+	tokens = tokens[1].split('_')
+	tokens = tokens[0].split('-')
+	Date = datetime(int(tokens[0]), int(tokens[1]), int(tokens[2]))
 	for filename in filenames:
 		if filename[-1] == 'z':
 			continue
@@ -163,6 +194,7 @@ def LoadTweets(filenames):
 		file = open(filename)
 		print "Loading: " + filename
 		# List of tweet objects
+		keywords
 		for line in file:
 			try:
 				temp = Tweet(json.loads(line))
@@ -179,7 +211,18 @@ def LoadTweets(filenames):
 		log.close()
 		counter += 1
 		print str(counter) + " out of " + str(len(filenames)) + " loaded."
-
+	
+	import json
+	file = open(str(date)+".txt", 'w')
+	file.write(str(total_keywords) + '\n')
+	file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
+	file.close()
+	
+	temp = dict(('date', date) + ('keyword_counts', keyword_occurrences))
+	O_index.insert(temp)
+	temp = dict(('date', date) + ('total_keywords', total_keywords))
+	C_index.insert(temp)
+	
 # Calculates the Document frequencies of all hashtags that appear with the query
 def CountHashtags(tweets):
 	dfs = {}

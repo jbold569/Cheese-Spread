@@ -53,7 +53,7 @@ class Server(object):
 		# Format {date: [tweet1, tweet2, ..], ...} 
 		desired_tweets = {}
 		temp = event_start_date
-		results = DK_index.find({'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}}, limit = 5000)
+		results = DK_index.find({'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}}, limit = 50)
 		print results.count(with_limit_and_skip=True)
 		for tweet in results:
 			day = event_start_date + timedelta(days = (tweet['date']-event_start_date).days)

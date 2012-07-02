@@ -35,8 +35,7 @@ def PoH(word, tweets):
 	
 def Entropy(word, tweets, tf, date):
 	import math
-	
-	entro = 0
+	entro = 0.0
 	for i in range(24):
 		occurrences = 0.0
 		for tweet in tweets:
