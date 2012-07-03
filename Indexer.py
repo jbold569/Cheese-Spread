@@ -14,11 +14,11 @@ REINDEX = False
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
 def WordFilter(words):
-	import re
+	import re, string
 	punc = re.compile('[%s]'%re.escape(string.punctuation))
 	
 	keywords = []
-	file = open("stopwords\\lextek.txt", 'r')
+	file = open("stopwords//lextek.txt", 'r')
 	stopwords = file.read().split()
 	file.close()
 	
@@ -30,12 +30,13 @@ def WordFilter(words):
 		# ignore mentions
 		if word[0] == '@':
 			continue
+		temp_word = punc.sub('',word)
 		# ignore stopwords
-		if word in stopwords:
+		if temp_word in stopwords:
 			continue
 			
-		temp_word = regex.sub('',word)
-	
+		keywords.append(temp_word)
+	return keywords
 		
 class Tweet:
 	def __init__(self, tweet):
@@ -45,10 +46,10 @@ class Tweet:
 			self.id = tweet['id']
 			self.retweet_count = tweet['retweet_count']
 			self.contents = tweet['text'].lower()
-			self.keywords = list(set(word_filter(self.contents.split())))
+			self.keywords = list(set(WordFilter(self.contents.split())))
 			
 			self.keyword_counts = {}
-			filtered_words = word_filter(self.contents.split())
+			filtered_words = WordFilter(self.contents.split())
 			for word in self.keywords:
 				self.keyword_counts[word] = filtered_words.count(word)
 				
@@ -67,21 +68,26 @@ class Tweet:
 			tokens = tweet['created_at'].split(' ')
 			time = tokens[3].split(':')
 			self.date = datetime(int(tokens[5]), months[tokens[1]], int(tokens[2]), int(time[0]), int(time[1]), int(time[2]))
+			self.valid = True
 			
 			if tweet['coordinates']:
+				if DEBUGGING:
+					print "Exact location."
 				self.location = {'type': tweet['coordinates']['type'], 'shape': None, 'lat': tweet['coordinates']['coordinates'][1], 'lng': tweet['coordinates']['coordinates'][0]}
 			elif tweet['place']:
+				if DEBUGGING:
+					print "Bounding Box"
 				shape = []
-				for coord in tweet['place']['coordinates']:
+				for coord in tweet['place']['bounding_box']['coordinates']:
 					shape.append({'lat': coord[1], 'lng': coord[0]})
-				self.location = {'type': tweet['place']['type'], 'shape': shape, 'lat': None, 'lng': None }
+				self.location = {'type': tweet['place']['bounding_box']['type'], 'shape': shape, 'lat': None, 'lng': None }
 			else:
 				self.valid = False
 				
 				
 			# Information about the user
 			self.user = tweet['user']['id']
-			self.follower_count = tweet['user']['follower_count']
+			self.follower_count = tweet['user']['followers_count']
 			
 				
 			
@@ -143,7 +149,7 @@ def InitDB():
 		C_index.reindex()
 
 # Structure {word: count, ...}
-keyword_occurences = {}
+keyword_occurrences = {}
 total_keywords = 0
 		
 def PopulateDB(tweets):
@@ -179,40 +185,47 @@ def PopulateDB(tweets):
 			else:
 				keyword_occurrences[word] += count
 			total_keywords += count
-				
-def LoadTweets(filenames):
+
+		file = open("out.txt", 'w')
+        	file.write(str(total_keywords) + '\n')
+        	file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
+        	file.close()
+
+def LoadTweets(path, filenames):
 	InitDB()
 	counter = 0
+	print len(filenames)
 	tokens = filenames[0].split('.')
 	tokens = tokens[1].split('_')
 	tokens = tokens[0].split('-')
 	Date = datetime(int(tokens[0]), int(tokens[1]), int(tokens[2]))
+	
 	for filename in filenames:
 		if filename[-1] == 'z':
 			continue
 		tweets = []
-		file = open(filename)
+		file = open(path+filename)
 		print "Loading: " + filename
 		# List of tweet objects
-		keywords
 		for line in file:
 			try:
 				temp = Tweet(json.loads(line))
 				if temp.valid:
 					tweets.append(temp)
-			except:
+			except :
 				if DEBUGGING:
 					print "Invalid json: " + line
 					continue
 		file.close()
+		print "File loaded and Tweet objects created."
 		PopulateDB(tweets)
 		log = open("log", 'a')
 		log.write(filename + " loaded.\n")
 		log.close()
 		counter += 1
 		print str(counter) + " out of " + str(len(filenames)) + " loaded."
-	
-	import json
+		
+	global keyword_occurrences, total_keywords
 	file = open(str(date)+".txt", 'w')
 	file.write(str(total_keywords) + '\n')
 	file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
@@ -248,7 +261,6 @@ if __name__ == '__main__':
 	if sys.argv[2] == 'True':
 		REINDEX = True
 	filenames = []
-	for path, names, files in os.walk('.//tweets//'+sys.argv[2]):
-		for file in files:
-			filenames.append(os.path.join(path, file))
-	LoadTweets(filenames)
+	path = './/tweets//'+sys.argv[3]+'//'
+	filenames = os.listdir(path)
+	LoadTweets(path, filenames)
