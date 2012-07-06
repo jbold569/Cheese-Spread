@@ -7,35 +7,55 @@
 
 from pymongo import *
 from datetime import *
+import Probe
 import json
+import re, string
 
 DEBUGGING = False
+probe = Probe.Probe()
 REINDEX = False
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
 def WordFilter(words):
-	import re, string
-	punc = re.compile('[%s]'%re.escape(string.punctuation))
 	
+	punc = re.compile('[%s]'%re.escape(string.punctuation))
+	num = re.compile('[%s]'%re.escape(string.digits))
+	white = re.compile('[\s]')
 	keywords = []
 	file = open("stopwords//lextek.txt", 'r')
 	stopwords = file.read().split()
 	file.close()
 	
 	for word in words:
+		probe.StartTiming("wordFilter")
 		# ignore unicode
-		if '\u' in word:
+		try:
+			word.encode('ascii')
+		except UnicodeEncodeError:
 			continue
 			
 		# ignore mentions
 		if word[0] == '@':
 			continue
 		temp_word = punc.sub('',word)
+		temp_word = num.sub('',temp_word)
+		
 		# ignore stopwords
-		if temp_word in stopwords:
+		try:
+			if temp_word in stopwords:
+				continue
+		except UnicodeWarning:
+			print temp_word
+		
+		# ignore empty string
+		if len(temp_word) == 0:
 			continue
+		if '\x00' in temp_word:
+			print temp_word
 			
 		keywords.append(temp_word)
+		probe.StopTiming("wordFilter")
+		
 	return keywords
 		
 class Tweet:
@@ -78,7 +98,7 @@ class Tweet:
 				if DEBUGGING:
 					print "Bounding Box"
 				shape = []
-				for coord in tweet['place']['bounding_box']['coordinates']:
+				for coord in tweet['place']['bounding_box']['coordinates'][0]:
 					shape.append({'lat': coord[1], 'lng': coord[0]})
 				self.location = {'type': tweet['place']['bounding_box']['type'], 'shape': shape, 'lat': None, 'lng': None }
 			else:
@@ -142,8 +162,8 @@ def InitDB():
 		DK_index.reindex()
 		H_index.ensure_index('hashtags')
 		H_index.reindex()
-		O_index.ensure_index('keyword', unique=True)
-		O_index.ensure_index('date')
+		O_index.ensure_index('keyword')
+		O_index.ensure_index('date', unique=True)
 		O_index.reindex()
 		C_index.ensure_index('date', unique=True)
 		C_index.reindex()
@@ -152,48 +172,52 @@ def InitDB():
 keyword_occurrences = {}
 total_keywords = 0
 		
-def PopulateDB(tweets):
+def PopulateDB(tweet, stats):
 	global DK_index, H_index, keyword_occurrences, total_keywords
-	counter = 0
-	loaded = 0
-	duplicate = 0
-	for tweet in tweets:
-		counter += 1
-		if DK_index.find({'_id':tweet.id}).count() == 0:
-			DK_index.insert(tweet.toDictionary())
-			#print "Tweet id:" + str(tweet.id) + " loaded into DateKeywordCollection."
-			loaded += 1
+	counter = stats[0] + 1
+	loaded = stats[1]
+	duplicate = stats[2]
+	
+	if DK_index.find({'_id':tweet.id}).count() == 0:
+		probe.StartTiming("dbInserts")
+		DK_index.insert(tweet.toDictionary())
+		probe.StopTiming("dbInserts")
+		#print "Tweet id:" + str(tweet.id) + " loaded into DateKeywordCollection."
+		loaded += 1
+	else:
+		duplicate += 1
+		if DEBUGGING:
+			print "Tweet id:" + str(tweet.id) + " already loaded into DateKeywordCollection, skipping."
+	if H_index.find({'_id':tweet.id}).count() == 0:
+		probe.StartTiming("dbInserts")
+		H_index.insert(tweet.toDictionary())
+		probe.StopTiming("dbInserts")
+		#print "Tweet id:" + str(tweet.id) + " loaded into HashtagCollection."
+	else:
+		if DEBUGGING:
+			print "Tweet id: " + str(tweet.id) + " already loaded into HashtagCollection, skipping."
+	
+	for word, count in tweet.keyword_counts.items():
+		probe.StartTiming("dictInserts")
+		if word not in keyword_occurrences.keys():
+			keyword_occurrences[word] = count
 		else:
-			duplicate += 1
-			if DEBUGGING:
-				print "Tweet id:" + str(tweet.id) + " already loaded into DateKeywordCollection, skipping."
-		if H_index.find({'_id':tweet.id}).count() == 0:
-			H_index.insert(tweet.toDictionary())
-			#print "Tweet id:" + str(tweet.id) + " loaded into HashtagCollection."
-		else:
-			if DEBUGGING:
-				print "Tweet id: " + str(tweet.id) + " already loaded into HashtagCollection, skipping."
-		if counter%1000 == 0:
-			print '\n'
-			print str(counter) + " out of " + str(len(tweets)) + " completed."
-			print str(loaded) + " tweets have been loaded."
-			print str(duplicate) + " tweets were already loaded."
+			keyword_occurrences[word] += count
+		total_keywords += count
+		probe.StopTiming("dictInserts")
 		
-		for word, count in tweet.keyword_counts.items():
-			if word not in keyword_occurrences.keys():
-				keyword_occurrences[word] = count
-			else:
-				keyword_occurrences[word] += count
-			total_keywords += count
-
+		'''probe.StartTiming("fileOutDict")
 		file = open("out.txt", 'w')
-        	file.write(str(total_keywords) + '\n')
-        	file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
-        	file.close()
+		file.write(str(total_keywords) + '\n')
+		file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
+		file.close()
+		probe.StopTiming("fileOutDict")
+		'''
+	return counter,loaded,duplicate
 
 def LoadTweets(path, filenames):
 	InitDB()
-	counter = 0
+	file_counter = 0
 	print len(filenames)
 	tokens = filenames[0].split('.')
 	tokens = tokens[1].split('_')
@@ -203,56 +227,47 @@ def LoadTweets(path, filenames):
 	for filename in filenames:
 		if filename[-1] == 'z':
 			continue
-		tweets = []
 		file = open(path+filename)
 		print "Loading: " + filename
-		# List of tweet objects
+		# line num, loaded tweets, duplicate tweets
+		stats = (0,0,0)
 		for line in file:
-			try:
-				temp = Tweet(json.loads(line))
-				if temp.valid:
-					tweets.append(temp)
-			except :
-				if DEBUGGING:
-					print "Invalid json: " + line
-					continue
+			#try:
+			temp = Tweet(json.loads(line))
+			if temp.valid:
+				probe.StartTiming("parsedLine")
+				stats = PopulateDB(temp, stats)
+				probe.StopTiming("parsedLine")
+			#except :
+			#	if DEBUGGING:
+				#	print "Invalid json: " + line
+				#	continue
+			
+			if stats[0]%1000 == 0:
+				print '\n'
+				print str(stats[0]) + " tweets completed."
+				print str(stats[1]) + " tweets have been loaded."
+				print str(stats[2]) + " tweets were already loaded."
+			
+	
 		file.close()
-		print "File loaded and Tweet objects created."
-		PopulateDB(tweets)
+		print "File loaded and Tweet objects inserted."
 		log = open("log", 'a')
 		log.write(filename + " loaded.\n")
 		log.close()
-		counter += 1
-		print str(counter) + " out of " + str(len(filenames)) + " loaded."
+		file_counter += 1
+		print str(file_counter) + " out of " + str(len(filenames)) + " loaded."
 		
 	global keyword_occurrences, total_keywords
-	file = open(str(date)+".txt", 'w')
+	#for key in keyword_occurrences.keys(): 
+		#print key + " " + str(len(key))
+	file = open(str(Date).split()[0]+".txt", 'w')
 	file.write(str(total_keywords) + '\n')
 	file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
 	file.close()
 	
-	temp = dict(('date', date) + ('keyword_counts', keyword_occurrences))
-	O_index.insert(temp)
-	temp = dict(('date', date) + ('total_keywords', total_keywords))
-	C_index.insert(temp)
-	
-# Calculates the Document frequencies of all hashtags that appear with the query
-def CountHashtags(tweets):
-	dfs = {}
-	for tweet in tweets:
-		# Check to see if the tag is already in the dictionary
-		# Loop through all tweets to count the number of occurrences
-		# calculate the df
-		for hashtag in tweet.hashtags:
-			if hashtag in dfs.keys():
-				continue
-			occurrences = 0.0
-			for t in tweets:
-				if t.valid and hashtag in t.hashtags:
-					occurrences += 1
-			#print hashtag + ": " + str(occurrences)
-			dfs[hashtag] = (occurrences/len(tweets), hashtag)
-	return dfs
+	O_index.insert({'date': Date, 'keyword_counts': keyword_occurrences})
+	C_index.insert({'date': Date, 'total_keywords': total_keywords})
 
 if __name__ == '__main__':
 	import os, sys
@@ -260,6 +275,13 @@ if __name__ == '__main__':
 		DEBUGGING = True
 	if sys.argv[2] == 'True':
 		REINDEX = True
+	
+	probe.InitProbe("parsedLine", "%.3f tweets parsed a second.", 10)
+	probe.InitProbe("dbInserts", "%.3f database inserts a second.", 10)
+	probe.InitProbe("dictInserts", "%.3f keyword dicitonary inserts a second.", 10)
+	probe.InitProbe("wordFilter", "%.3f keywords filtered a second.\n", 10)
+	probe.RunProbes()
+		
 	filenames = []
 	path = './/tweets//'+sys.argv[3]+'//'
 	filenames = os.listdir(path)
