@@ -10,6 +10,7 @@ from datetime import *
 import Probe
 import json
 import re, string
+import gzip
 
 DEBUGGING = False
 probe = Probe.Probe()
@@ -20,6 +21,7 @@ def WordFilter(words):
 	
 	punc = re.compile('[%s]'%re.escape(string.punctuation))
 	num = re.compile('[%s]'%re.escape(string.digits))
+	alpha = re.compile('[^a-z]')
 	white = re.compile('[\s]')
 	keywords = []
 	file = open("stopwords//lextek.txt", 'r')
@@ -28,12 +30,18 @@ def WordFilter(words):
 	
 	for word in words:
 		probe.StartTiming("wordFilter")
-		# ignore unicode
-		try:
-			word.encode('ascii')
-		except UnicodeEncodeError:
+		# ignore long strings
+		if len(word) > 20:
 			continue
-			
+
+		# ignore unicode
+		if re.search(alpha, word) != None:
+			continue
+		
+		# ignore url
+		if u'http' in word:
+			continue
+	
 		# ignore mentions
 		if word[0] == '@':
 			continue
@@ -51,6 +59,7 @@ def WordFilter(words):
 		if len(temp_word) == 0:
 			continue
 		if '\x00' in temp_word:
+			temp_word = string.replace(temp_word, '\x00', '')
 			print temp_word
 			
 		keywords.append(temp_word)
@@ -66,12 +75,11 @@ class Tweet:
 			self.id = tweet['id']
 			self.retweet_count = tweet['retweet_count']
 			self.contents = tweet['text'].lower()
-			self.keywords = list(set(WordFilter(self.contents.split())))
-			
+			keywords = WordFilter(self.contents.split())
+			self.keywords = list(set(keywords))
 			self.keyword_counts = {}
-			filtered_words = WordFilter(self.contents.split())
 			for word in self.keywords:
-				self.keyword_counts[word] = filtered_words.count(word)
+				self.keyword_counts[word] = keywords.count(word)
 				
 			self.urls = []
 			self.user_mentions = []
@@ -157,117 +165,116 @@ def InitDB():
 	C_index = db.KeywordCountCollection
 	
 	if REINDEX:
-		DK_index.ensure_index('date')
-		DK_index.ensure_index('keywords')
-		DK_index.reindex()
-		H_index.ensure_index('hashtags')
-		H_index.reindex()
-		O_index.ensure_index('keyword')
-		O_index.ensure_index('date', unique=True)
-		O_index.reindex()
-		C_index.ensure_index('date', unique=True)
-		C_index.reindex()
-
-# Structure {word: count, ...}
-keyword_occurrences = {}
-total_keywords = 0
+		input = raw_input("Reindex DateKeywordCollection? (y/n): ")
+		if input == 'y':
+			DK_index.ensure_index('date')
+			DK_index.ensure_index('keywords')
+			DK_index.reindex()
 		
-def PopulateDB(tweet, stats):
-	global DK_index, H_index, keyword_occurrences, total_keywords
-	counter = stats[0] + 1
-	loaded = stats[1]
-	duplicate = stats[2]
+		input = raw_input("Reindex HashtagCollection? (y/n): ")
+                if input == 'y':
+			H_index.ensure_index('hashtags')
+			H_index.reindex()
+		input = raw_input("Reindex OccurrencesCollection? (y/n): ")
+                if input == 'y':	
+			O_index.ensure_index('keyword')
+			O_index.ensure_index('date')
+			#O_index.reindex()
+		input = raw_input("Reindex KeywordCountsCollection? (y/n): ")
+                if input == 'y':	
+			C_index.ensure_index('date', unique=True)
+			#C_index.reindex()
+
+# Structure {word: stat, ...}
+keyword_occurrences = {}
+document_freqs = {}
+hashtag_occurrences = {}
+total_keywords = 0
+total_hashtags = 0
+		
+def PopulateDB(tweet):
+	global DK_index, H_index, document_freqs, keyword_occurrences, hashtag_occurrences, total_keywords, total_hashtags
 	
-	if DK_index.find({'_id':tweet.id}).count() == 0:
-		probe.StartTiming("dbInserts")
-		DK_index.insert(tweet.toDictionary())
-		probe.StopTiming("dbInserts")
-		#print "Tweet id:" + str(tweet.id) + " loaded into DateKeywordCollection."
-		loaded += 1
-	else:
-		duplicate += 1
-		if DEBUGGING:
-			print "Tweet id:" + str(tweet.id) + " already loaded into DateKeywordCollection, skipping."
-	if H_index.find({'_id':tweet.id}).count() == 0:
-		probe.StartTiming("dbInserts")
-		H_index.insert(tweet.toDictionary())
-		probe.StopTiming("dbInserts")
-		#print "Tweet id:" + str(tweet.id) + " loaded into HashtagCollection."
-	else:
-		if DEBUGGING:
-			print "Tweet id: " + str(tweet.id) + " already loaded into HashtagCollection, skipping."
+	probe.StartTiming("dbInserts")
+	DK_index.update({'_id': tweet.id}, tweet.toDictionary(), upsert=True)
+	H_index.update({'_id': tweet.id}, tweet.toDictionary(), upsert=True)
+	probe.StopTiming("dbInserts")
 	
 	for word, count in tweet.keyword_counts.items():
-		probe.StartTiming("dictInserts")
-		if word not in keyword_occurrences.keys():
-			keyword_occurrences[word] = count
-		else:
+		try:
 			keyword_occurrences[word] += count
+			document_freqs[word] += 1
+		except KeyError:
+			keyword_occurrences[word] = count
+			document_freqs[word] = 1	
 		total_keywords += count
-		probe.StopTiming("dictInserts")
-		
-		'''probe.StartTiming("fileOutDict")
-		file = open("out.txt", 'w')
-		file.write(str(total_keywords) + '\n')
-		file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
-		file.close()
-		probe.StopTiming("fileOutDict")
-		'''
-	return counter,loaded,duplicate
+		if total_keywords%10000 == 0:
+			print "Total Keyword Count: " + str(total_keywords/1000000.0) + "M."
+	
+	for tag in tweet.hashtags:
+		for word in tweet.keywords:
+			try:
+                	        hashtag_occurrences[word] += tag.lower().count(word)
+                	except KeyError:
+                	        hashtag_occurrences[word] = tag.lower().count(word)
+	total_hashtags += len(tweet.hashtags)
 
-def LoadTweets(path, filenames):
+def LoadTweets(file_dict):
 	InitDB()
-	file_counter = 0
-	print len(filenames)
-	tokens = filenames[0].split('.')
-	tokens = tokens[1].split('_')
-	tokens = tokens[0].split('-')
-	Date = datetime(int(tokens[0]), int(tokens[1]), int(tokens[2]))
-	
-	for filename in filenames:
-		if filename[-1] == 'z':
-			continue
-		file = open(path+filename)
-		print "Loading: " + filename
-		# line num, loaded tweets, duplicate tweets
-		stats = (0,0,0)
-		for line in file:
-			#try:
-			temp = Tweet(json.loads(line))
-			if temp.valid:
-				probe.StartTiming("parsedLine")
-				stats = PopulateDB(temp, stats)
-				probe.StopTiming("parsedLine")
-			#except :
-			#	if DEBUGGING:
-				#	print "Invalid json: " + line
-				#	continue
+	global keyword_occurrences, document_freqs, hashtag_occurrences, total_keywords, total_hashtags
+	for month,days in file_dict.items():
+		for day,filenames in days.items():
+			if int(day) > 10:
+				continue
+			document_freqs = {}
+			keyword_occurrences = {}
+	                hashtag_occurrences = {}
+			total_dfs = 0.0
+			total_pohs = 0.0
+        	        total_keywords = 0
+        	        total_hashtags = 0
+			file_counter = 0
+			tweet_counter = 0
+			Date = datetime(2012, int(month), int(day))
 			
-			if stats[0]%1000 == 0:
-				print '\n'
-				print str(stats[0]) + " tweets completed."
-				print str(stats[1]) + " tweets have been loaded."
-				print str(stats[2]) + " tweets were already loaded."
-			
-	
-		file.close()
-		print "File loaded and Tweet objects inserted."
-		log = open("log", 'a')
-		log.write(filename + " loaded.\n")
-		log.close()
-		file_counter += 1
-		print str(file_counter) + " out of " + str(len(filenames)) + " loaded."
+			for filename in filenames:
+				file = gzip.open(filename, 'r')
+				print "Loading: " + filename
+				# line num, loaded tweets, duplicate tweets
+				for line in file:
+					try:
+						temp = Tweet(json.loads(line))
+						if temp.valid:
+                                                	probe.StartTiming("parsedLine")
+                                                	PopulateDB(temp)
+                                                	probe.StopTiming("parsedLine")
+						tweet_counter += 1						
+					except ValueError:
+						print "Bad JSON."
+				file.close()
+				print filename + " loaded and Tweet objects inserted."
+				file_counter += 1
+				print str(file_counter) + " out of " + str(len(filenames)) + " loaded."
 		
-	global keyword_occurrences, total_keywords
-	#for key in keyword_occurrences.keys(): 
-		#print key + " " + str(len(key))
-	file = open(str(Date).split()[0]+".txt", 'w')
-	file.write(str(total_keywords) + '\n')
-	file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
-	file.close()
-	
-	O_index.insert({'date': Date, 'keyword_counts': keyword_occurrences})
-	C_index.insert({'date': Date, 'total_keywords': total_keywords})
+			file = open("keywords/" + str(Date).split()[0]+".txt", 'w')
+			file.write(str(total_keywords) + '\n')
+			file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
+			file.close()
+			for keyword,tf in keyword_occurrences.items():
+				document_freqs[keyword] /= tweet_counter
+				total_dfs += document_freqs[keyword]
+				try:
+					hashtag_occurrences[keyword] /= total_hashtags
+					total_pohs += hashtag_occurrences[keyword]
+					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf,\
+						'df': document_freqs[keyword], 'poh': hashtag_occurrences[keyword]}, upsert=True)
+				except KeyError:
+					hashtag_occurrences[keyword] = 0
+					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf,\
+						'df': document_freqs[keyword]/tweet_counter, 'poh': 0}, upsert=True)
+			C_index.update({'date': Date}, {'date': Date, 'total_keywords': total_keywords, 'total_hashtags': total_hashtags,\
+					'total_tweets': tweet_counter, 'avg_df': total_dfs/total_keywords, 'avg_poh': total_pohs/total_keywords },\
+					upsert=True)
 
 if __name__ == '__main__':
 	import os, sys
@@ -278,11 +285,25 @@ if __name__ == '__main__':
 	
 	probe.InitProbe("parsedLine", "%.3f tweets parsed a second.", 10)
 	probe.InitProbe("dbInserts", "%.3f database inserts a second.", 10)
-	probe.InitProbe("dictInserts", "%.3f keyword dicitonary inserts a second.", 10)
 	probe.InitProbe("wordFilter", "%.3f keywords filtered a second.\n", 10)
 	probe.RunProbes()
 		
 	filenames = []
-	path = './/tweets//'+sys.argv[3]+'//'
-	filenames = os.listdir(path)
-	LoadTweets(path, filenames)
+	for path, names, files in os.walk('./tweets/'+sys.argv[3]):
+		for file in files:
+			filenames.append(os.path.join(path, file))
+	file_dict = {}
+	for filename in filenames:
+		tokens = filename.split('/')
+		month = int(tokens[2])
+		day = int(tokens[3])
+		try:
+			if day not in file_dict[month].keys(): 
+				file_dict[month][day] = []				
+			file_dict[month][day].append(filename)
+		except KeyError:
+			file_dict[month] = {}
+ 			if day not in file_dict[month].keys():
+                                file_dict[month][day] = []
+                        file_dict[month][day].append(filename)
+	LoadTweets(file_dict)

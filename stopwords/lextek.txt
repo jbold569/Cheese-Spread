@@ -1,4 +1,6 @@
 a
+aa
+aaa
 about
 above
 across
@@ -34,6 +36,8 @@ asks
 at
 away
 b
+bb
+bbb
 back
 backed
 backing
@@ -57,6 +61,8 @@ both
 but
 by
 c
+cc
+ccc
 came
 can
 cannot
@@ -69,6 +75,8 @@ clearly
 come
 could
 d
+dd
+ddd
 did
 differ
 different
@@ -83,6 +91,8 @@ downing
 downs
 during
 e
+ee
+eee
 each
 early
 either
@@ -100,6 +110,8 @@ everyone
 everything
 everywhere
 f
+ff
+fff
 face
 faces
 fact
@@ -120,6 +132,8 @@ furthered
 furthering
 furthers
 g
+gg
+ggg
 gave
 general
 generally
@@ -141,6 +155,8 @@ grouped
 grouping
 groups
 h
+hh
+hhh
 had
 has
 have
@@ -160,6 +176,8 @@ his
 how
 however
 i
+ii
+iii
 if
 important
 in
@@ -173,8 +191,12 @@ it
 its
 itself
 j
+jj
+jjj
 just
 k
+kk
+kkk
 keep
 keeps
 kind
@@ -183,6 +205,8 @@ know
 known
 knows
 l
+ll
+lll
 large
 largely
 last
@@ -198,6 +222,8 @@ long
 longer
 longest
 m
+mm
+mmm
 made
 make
 making
@@ -219,6 +245,8 @@ must
 my
 myself
 n
+nn
+nnn
 necessary
 need
 needed
@@ -241,6 +269,8 @@ nowhere
 number
 numbers
 o
+oo
+ooo
 of
 off
 often
@@ -266,6 +296,8 @@ our
 out
 over
 p
+pp
+ppp
 part
 parted
 parting
@@ -288,8 +320,12 @@ problems
 put
 puts
 q
+qq
+qqq
 quite
 r
+rr
+rrr
 rather
 really
 right
@@ -297,6 +333,8 @@ right
 room
 rooms
 s
+ss
+sss
 said
 same
 saw
@@ -337,6 +375,8 @@ still
 such
 sure
 t
+tt
+ttt
 take
 taken
 than
@@ -373,6 +413,8 @@ turning
 turns
 two
 u
+uu
+uuu
 under
 until
 up
@@ -382,8 +424,12 @@ use
 used
 uses
 v
+vv
+vvv
 very
 w
+ww
+www
 want
 wanted
 wanting
@@ -416,7 +462,11 @@ working
 works
 would
 x
+xx
+xxx
 y
+yy
+yyy
 year
 years
 yet
@@ -427,6 +477,8 @@ youngest
 your
 yours
 z
+zz
+zzz
 un
 una
 unas
@@ -545,7 +597,8 @@ entonces
 tiempo
 verdad
 verdadero
-verdadera	cierto
+verdadera
+cierto
 ciertos
 cierta
 ciertas
