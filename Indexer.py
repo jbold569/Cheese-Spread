@@ -273,10 +273,10 @@ def LoadTweets(file_dict):
 				total_dfs += document_freqs[keyword]
 				try:
 					total_pohs += hashtag_occurrences[keyword]
-					O_index.update({'date': Date, 'keyword': keyword}, {'$set': {'tf': tf, 'df': document_freqs[keyword],\
-					'poh': hashtag_occurrences[keyword], 'entropy' = []}}, upsert=True)
+					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf, 'df': document_freqs[keyword],\
+					'poh': hashtag_occurrences[keyword], 'entropy' = []}, upsert=True)
 				except KeyError:
-					O_index.update({'date': Date, 'keyword': keyword}, {'$set': {'tf': tf, 'df': document_freqs[keyword],\
+					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf, 'df': document_freqs[keyword],\
 					'poh': 0, 'entropy' = []}, upsert=True)
 			
 			# These two if statements handle entropy
