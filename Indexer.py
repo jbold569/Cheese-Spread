@@ -69,7 +69,7 @@ def WordFilter(words):
 		
 class Tweet:
 	def __init__(self, tweet):
-		global DEBUGGING
+		global DEBUGGING, hashtags
 		try:
 			# Information about the tweet
 			self.id = tweet['id']
@@ -91,7 +91,11 @@ class Tweet:
 				self.user_mentions.append(mention['id'])
 			for tag in tweet['entities']['hashtags']:
 				self.hashtags.append(tag['text'])
-			
+				try:
+					a = hashtags[tag['text']]
+				except KeyError:
+					hashtags[tag['text']] = True
+
 			#This will be a date object
 			tokens = tweet['created_at'].split(' ')
 			time = tokens[3].split(':')
@@ -186,9 +190,11 @@ def InitDB():
 			#C_index.reindex()
 
 # Structure {word: stat, ...}
+
 keyword_occurrences = {}
 document_freqs = {}
 hashtag_occurrences = {}
+hashtags = {}
 total_keywords = 0
 total_hashtags = 0
 		
@@ -207,9 +213,9 @@ def PopulateDB(tweet):
 		except KeyError:
 			keyword_occurrences[word] = count
 			document_freqs[word] = 1	
-		total_keywords += count
-		if total_keywords%10000 == 0:
-			print "Total Keyword Count: " + str(total_keywords/1000000.0) + "M."
+			total_keywords += 1
+			if total_keywords%1000 == 0:
+				print "Total Keyword Count: " + str(total_keywords/1000.0) + "K."
 	
 	for tag in tweet.hashtags:
 		for word in tweet.keywords:
@@ -221,20 +227,18 @@ def PopulateDB(tweet):
 
 def LoadTweets(file_dict):
 	InitDB()
-	global keyword_occurrences, document_freqs, hashtag_occurrences, total_keywords, total_hashtags
+	global hashtags, keyword_occurrences, document_freqs, hashtag_occurrences, total_keywords, total_hashtags
 	for month,days in file_dict.items():
 		for day,filenames in days.items():
-			if int(day) > 10:
-				continue
 			document_freqs = {}
 			keyword_occurrences = {}
 	                hashtag_occurrences = {}
 			total_dfs = 0.0
 			total_pohs = 0.0
-        	        total_keywords = 0
-        	        total_hashtags = 0
+        	        total_keywords = 0.0
+        	        total_hashtags = 0.0
 			file_counter = 0
-			tweet_counter = 0
+			tweet_counter = 0.0
 			Date = datetime(2012, int(month), int(day))
 			
 			for filename in filenames:
@@ -255,25 +259,24 @@ def LoadTweets(file_dict):
 				print filename + " loaded and Tweet objects inserted."
 				file_counter += 1
 				print str(file_counter) + " out of " + str(len(filenames)) + " loaded."
-		
+			if total_keywords == 0:
+				continue
 			file = open("keywords/" + str(Date).split()[0]+".txt", 'w')
 			file.write(str(total_keywords) + '\n')
 			file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
 			file.close()
+			total_hashtags = len(hashtags.keys())
 			for keyword,tf in keyword_occurrences.items():
-				document_freqs[keyword] /= tweet_counter
 				total_dfs += document_freqs[keyword]
 				try:
-					hashtag_occurrences[keyword] /= total_hashtags
 					total_pohs += hashtag_occurrences[keyword]
 					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf,\
 						'df': document_freqs[keyword], 'poh': hashtag_occurrences[keyword]}, upsert=True)
 				except KeyError:
-					hashtag_occurrences[keyword] = 0
 					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf,\
-						'df': document_freqs[keyword]/tweet_counter, 'poh': 0}, upsert=True)
+						'df': document_freqs[keyword], 'poh': 0}, upsert=True)
 			C_index.update({'date': Date}, {'date': Date, 'total_keywords': total_keywords, 'total_hashtags': total_hashtags,\
-					'total_tweets': tweet_counter, 'avg_df': total_dfs/total_keywords, 'avg_poh': total_pohs/total_keywords },\
+					'total_tweets': tweet_counter, 'avg_df': total_dfs/total_keywords, 'avg_poh': total_pohs/total_keywords},\
 					upsert=True)
 
 if __name__ == '__main__':
