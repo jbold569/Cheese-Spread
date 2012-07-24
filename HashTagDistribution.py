@@ -27,8 +27,6 @@ def FilterByQuery(query, date):
 
 	#print len(filtered_tweets)
 	#return filtered_tweets
-	
-
 
 class Server(object):
 	results = []
@@ -36,9 +34,6 @@ class Server(object):
 	
 	@cherrypy.expose
 	def QueryEvents(self, startDate, endDate):
-		print startDate
-		print endDate
-		
 		start  = startDate
 		end = endDate
 		tokens = start.split('-')
@@ -46,27 +41,39 @@ class Server(object):
 		tokens = end.split('-')
 		event_end_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
 		# Mongo sequence
+		print event_start_date
+		print event_end_date
+		
 		connection = Connection(host = 'hamm.cse.tamu.edu')
 		db = connection.GeoTaggedTweets
 		DK_index = db.DateKeywordCollection
 		
-		# Format {date: [tweet1, tweet2, ..], ...} 
+		# Format {date: [tweet1, tweet2, ...], ...} 
 		desired_tweets = {}
 		temp = event_start_date
-		results = DK_index.find({'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}}, limit = 50)
-		print results.count(with_limit_and_skip=True)
-		for tweet in results:
-			day = event_start_date + timedelta(days = (tweet['date']-event_start_date).days)
-			if day not in desired_tweets.keys():
-				desired_tweets[day] = []
-			desired_tweets[day].append(tweet)
-	
+		results = DK_index.find({'$and':[{'date' : {'$gte': event_start_date}}, {'date' : {'$lte': event_end_date}}]}, limit=5000)
+		while results:
+			print results.count(with_limit_and_skip=True)
+			query_date = None
+			for tweet in results:		
+				day = datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day)
+				#print tweet['date']
+				#print day
+				try:
+					desired_tweets[day].append({'keywords': tweet['keywords']})
+				except KeyError:
+					desired_tweets[day] = []
+					desired_tweets[day].append({'keywords': tweet['keywords']})
+				query_date = tweet['date']
+			print query_date
+			results = DK_index.find({'$and':[{'date' : {'$gt': query_date}}, {'date' : {'$lte': event_end_date}}]}, limit=5000)
+				
 		#print desired_tweets
 		# dictionary form {"HashTag": (df,"HashTag"), ...}
 		#hashtag_dfs = CountHashtags(desired_tweets)
 		# Structure will be a 2D array, first dimension is divided by day and the 
 		# second is divided by event
-		results = et.FindEvents(desired_tweets)
+		results = et.FindEvents(desired_tweets, db)
 		
 		
 		return None
@@ -90,7 +97,7 @@ class Server(object):
 		
 		
 		desired_tweets = []
-		results = DK_index.find({'keywords': keyword.lower(), 'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}}, limit = 500)
+		results = DK_index.find({'keywords': keyword.lower(), 'date' : {'$gte': event_start_date}, 'date' : {'$lte': event_end_date}})
 		print results.count()
 		for tweet in results:
 			#print tweet

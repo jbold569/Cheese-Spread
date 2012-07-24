@@ -1,4 +1,8 @@
+import json
+import datetime as dt
+
 EVENT_ID = 0
+database = None
 
 class Event:
 	def __init__(self, parent_id, id, tweets):
@@ -15,35 +19,44 @@ def sim(doc1, doc2):
 	
 	return score
 	
-def DocumentFrequency(word, tweets):
-	occurrences = 0.0
-	for tweet in tweets:
-		if word in tweet['keywords']:
-			occurrences += 1
-	return occurrences/len(tweets), occurrences
+def getStats(word, date, totals):
+	global database
+	occurrences, = database['OccurrencesCollection'].find({'$and': [{"date": date}, {"keyword": word}]})
+	from math import log10
+	df = float(occurrences['df'])/totals['total_tweets']
+	idf = log10(totals['total_tweets']/df)
+	poh = float(occurrences['poh'])/totals['total_tweets']
+	return idf, poh
 
-def PoH(word, tweets):
-	occurrences = 0.0
-	total_tags = 0
-	for tweet in tweets:
-		for tag in tweet['hashtags']:
-			total_tags += 1
-			if word == tag.lower():
-				occurrences += 1
-				break
-	return occurrences/total_tags
-	
-def Entropy(word, tweets, tf, date):
+# TODO: figure out a way to calculate the document count only once	
+def Entropy(word, date, span):
+	global database
 	import math
 	entro = 0.0
-	for i in range(24):
-		occurrences = 0.0
-		for tweet in tweets:
-			if (tweet['date'] - date).seconds/3600 == i:
-				if word in tweet['keywords']:
-					occurrences += 1
-		Prob_i = occurrences/tf
-		entro -= Prob_i * math.log10(Prob_i+1)
+	tfs = []
+	total_t = 0.0
+	total_d = 0.0
+	i = 0
+	while True:
+		#print date+dt.timedelta(days=i)
+		#print word
+		result = database['OccurrencesCollection'].find_one({'$and': [{'date':date+dt.timedelta(days=i)}, {'keyword':word}]})
+		i += 1
+		if not result:
+			if i == span:
+				break
+			continue
+		
+		term_count = result['tf']
+		tf_i = term_count
+		tfs.append(tf_i)
+		total_t += term_count
+		if i == span:
+			break
+			
+	for i in range(len(tfs)):
+		prob_i = tfs[i]/total_t
+		entro -= prob_i* math.log10(prob_i+1)
 	return entro
 
 def isTopicalword(metric, avr_metric):
@@ -61,17 +74,14 @@ def isTopicalword(metric, avr_metric):
 			return False
 			
 def getTopicalWords(date_tweet_pairs):
-	words = []
+	global database
+	keywords_set = []
 	print "Creating keyword set..."
-	for tweets in date_tweet_pairs.values():
-		for tweet in tweets:
-			words += tweet['keywords']
+	for date in date_tweet_pairs.keys():
+		results = database['OccurrencesCollection'].find({'date': date}, limit=500)
+		for result in results:
+			keywords_set.append(result['keyword'])
 	print "Done.\n"
-	keywords_set = list(set(words))
-	import json
-	file = open("Keywords", 'w')
-	file.write(json.dumps(keywords_set, sort_keys=True, indent=4))
-	file.close()
 	
 	# Structure {date: {word1: (df, poh, entro) , word2: (df, poh, entro) , ...}, ...}
 	term_metrics = {}
@@ -80,39 +90,38 @@ def getTopicalWords(date_tweet_pairs):
 	print "Calculating metrics..."
 	for date in date_tweet_pairs.keys():
 		temp = {}
-		metrics = [0, 0, 0]
-		print "Date: ",
+		total_entropy = 0.0
+		print "Calculating metrics for: ",
 		print date
-		
+		totals, = database['KeywordCountCollection'].find({"date": date})
 		for word in keywords_set:
-			print "Calculating metrics for ",
-			try:
-				print word
-			except UnicodeEncodeError:
-				print "<Can not display word>"
 			
-			df,tf = DocumentFrequency(word, date_tweet_pairs[date])
-			metrics[0] += df
-			poh = PoH(word, date_tweet_pairs[date])
-			metrics[1] += poh
-			entro = Entropy(word, date_tweet_pairs[date], tf, date)
-			metrics[2] += entro
+			idf,poh = getStats(word, date, totals)
+			entro = Entropy(word, date, 3)
+			total_entropy += entro
 			
-			temp[word] = (df, poh, entro)
-			print "Done..."
-			
-		metrics[0] /= len(keywords_set)
-		metrics[1] /= len(keywords_set)
-		metrics[2] /= len(keywords_set)
+			temp[word] = (idf, poh, entro)
+		print "Done..."	
+		avg_entro = total_entropy/len(keywords_set)
 		
 		term_metrics[date] = temp
-		metric_averages[date] = tuple(metrics)
+		results, = database['KeywordCountCollection'].find({'date': date})
+		avg_df = float(results['avg_df'])/results['total_tweets']
+		avg_poh = float(results['avg_poh'])/results['total_tweets']
+		from math import log10
+		avg_idf = log10(results['total_tweets']/avg_df)
+		metric_averages[date] = (avg_idf, avg_poh, avg_entro)
+		
 	print "Done.\n"
-	print term_metrics
-	print metric_averages
 	file = open("Stats", 'w')
-	file.write(json.dumps(term_metrics, sort_keys=True, indent=4))
-	file.write(json.dumps(metric_averages, sort_keys=True, indent=4))
+	temp = {}
+	for key, value in term_metrics.items():
+		temp[str(key)] = value
+	file.write(json.dumps(temp, sort_keys=True, indent=4))
+	
+	for key, value in metric_averages.items():
+		temp[str(key)] = value
+	file.write(json.dumps(temp, sort_keys=True, indent=4))
 	file.close()
 	
 	# Structure {date: [word1, word2, ...], ...}
@@ -128,27 +137,31 @@ def getTopicalWords(date_tweet_pairs):
 def getDocVectors(topicalwords, tweets):
 	# Dictionary that represents the tweets in the topicalword
 	# vector space
-	# Structure {date: { tweet: [normalized vector], ...}, ...}
+	# Structure {date: { tweet.id: [normalized vector], ...}, ...}
 	tweet_vectors = {}
 	for date, tWords in topicalwords.items():
 		tweet_vectors[date] = {}
 		for tweet in tweets[date]:
-			tweet_vectors[date][tweet] = []
+			tweet_vectors[date][tweet['_id']] = []
+			total = 0.0
 			for tWord in tWords:
-				tweet_vectors[date][tweet].append(tweet['keywords'].count(tWord))
+				val = tweet['keywords'].count(tWord)
+				total += val**2
+				tweet_vectors[date][tweet['_id']].append(val)
 				
 			# Determine the magnitude of the vector
-			total = 0.0
-			for val in tweet_vectors[date][tweet]:
-				total += val**2
 			mag = total**.5
 				
 			# Normalize the vector
-			for i in range(len(tweet_vectors[date][tweet])):
-				tweet_vectors[date][tweet][i] /= mag
+			for i in range(len(tweet_vectors[date][tweet['_id']])):
+				if mag == 0:
+					continue
+				tweet_vectors[date][tweet['_id']][i] /= mag
 	return tweet_vectors
 	
-def FindEvents(tweets):
+def FindEvents(tweets, db):
+	global database
+	database  = db
 	# Structure of tweets {date: [tweet1, tweet2, ..], ...} 
 		
 	# Structure {date: [word1, word2, ...], ...}
@@ -156,8 +169,10 @@ def FindEvents(tweets):
 	
 	# output the topicalwords to a file
 	file = open("Topicalwords", 'w')
-	import json
-	file.write(json.dumps(topicalwords, sort_keys=True, indent=4))
+	temp = {}
+	for key, value in topicalwords.items():
+		temp[str(key)] = value
+	file.write(json.dumps(temp, sort_keys=True, indent=4))
 	file.close()
 	doc_vectors = getDocVectors(topicalwords, tweets)
 	

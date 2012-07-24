@@ -197,7 +197,9 @@ hashtag_occurrences = {}
 hashtags = {}
 total_keywords = 0
 total_hashtags = 0
-		
+
+term_freqs = []
+
 def PopulateDB(tweet):
 	global DK_index, H_index, document_freqs, keyword_occurrences, hashtag_occurrences, total_keywords, total_hashtags
 	
@@ -266,16 +268,34 @@ def LoadTweets(file_dict):
 			file.write(json.dumps(keyword_occurrences, sort_keys=True, indent=4))
 			file.close()
 			total_hashtags = len(hashtags.keys())
+				
 			for keyword,tf in keyword_occurrences.items():
 				total_dfs += document_freqs[keyword]
 				try:
 					total_pohs += hashtag_occurrences[keyword]
-					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf,\
-						'df': document_freqs[keyword], 'poh': hashtag_occurrences[keyword]}, upsert=True)
+					O_index.update({'date': Date, 'keyword': keyword}, {'$set': {'tf': tf, 'df': document_freqs[keyword],\
+					'poh': hashtag_occurrences[keyword], 'entropy' = []}}, upsert=True)
 				except KeyError:
-					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf,\
-						'df': document_freqs[keyword], 'poh': 0}, upsert=True)
-			C_index.update({'date': Date}, {'date': Date, 'total_keywords': total_keywords, 'total_hashtags': total_hashtags,\
+					O_index.update({'date': Date, 'keyword': keyword}, {'$set': {'tf': tf, 'df': document_freqs[keyword],\
+					'poh': 0, 'entropy' = []}, upsert=True)
+			
+			# These two if statements handle entropy
+			if len(term_freqs) < 11:
+				term_freqs.append((date, keyword_occurrences))
+			
+			if len(term_freqs) == 11:
+				e_date = term_freqs[5][0]
+				for keyword in term_freqs[5][1].keys():
+					tfs = []
+					for data in term_freqs:
+						try:
+							tfs.append(data[1][keyword])
+						except KeyError:
+							tfs.append(0)
+					O_index.update({'date': e_date, 'keyword': keyword}, {'$set': {'entropy' = tfs}}, upsert=True)
+				term_freqs.pop(0)
+				
+			C_index.update({'date': Date}, {'$set': {'total_keywords': total_keywords, 'total_hashtags': total_hashtags,\
 					'total_tweets': tweet_counter, 'avg_df': total_dfs/total_keywords, 'avg_poh': total_pohs/total_keywords},\
 					upsert=True)
 
