@@ -1,4 +1,5 @@
 import utils
+import datetime as dt
 
 class Tweet:
 	def __init__(self, dTweet):
@@ -8,7 +9,7 @@ class Tweet:
 			self.retweet_count = dTweet['retweet_count']
 			self.contents = dTweet['text'].lower()
 			keywords = utils.WordFilter(self.contents.split())
-			self.lKeywords = list(set(keywords))
+			self.keywords = list(set(keywords))
 			self.dTermFreqs = {}
 			for word in self.keywords:
 				self.dTermFreqs[word] = keywords.count(word)
@@ -26,7 +27,7 @@ class Tweet:
 			#This will be a date object
 			tokens = dTweet['created_at'].split(' ')
 			time = tokens[3].split(':')
-			self.date = datetime(int(tokens[5]), months[tokens[1]], int(tokens[2]), int(time[0]), int(time[1]), int(time[2]))
+			self.date = dt.datetime(int(tokens[5]), utils.months[tokens[1]], int(tokens[2]), int(time[0]), int(time[1]), int(time[2]))
 			self.valid = True
 
 			

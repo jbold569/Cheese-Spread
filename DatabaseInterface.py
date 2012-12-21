@@ -35,6 +35,7 @@ class DatabaseInterface():
 	def updateTimePeriodStats(self, data):
 		if type(data) == type(TimePeriodStat):
 			data = data.toDBObject()
+			print "Entered"
 		self.db['TimePeriodStatsCollection'].update(data[0], data[1], upsert=True)
 		
 	def index(self):

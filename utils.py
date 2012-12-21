@@ -1,4 +1,7 @@
+import re,string
+
 UNK, USA = range(2)
+months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
 # Parses the time period from the filename
 def parseTimePeriod(filename):
@@ -10,15 +13,13 @@ def parseTimePeriod(filename):
 	return dt.datetime(date[0], date[1], date[2], time[0], time[1])
 				
 def assignBounds(location):
-	if not tweet.location['shape']:
+	if not location['shape']:
 		lat = location['lat']
 		lng = location['lng']
 		if lat <= 48 and lat >= 25 and lng >= -125 and lng <= -66:
 			return USA
 		else:
 			return UNK
-
-	tweets_outbound += 1
 	return False
 
 # Need to make tests for this function
@@ -34,7 +35,6 @@ def WordFilter(words):
 	file.close()
 
 	for word in words:
-		probe.StartTiming("wordFilter")
 		# ignore long strings
 		if len(word) > 20:
 			continue
@@ -68,6 +68,4 @@ def WordFilter(words):
 			print temp_word
 		
 		keywords.append(temp_word)
-		probe.StopTiming("wordFilter")
-
 	return keywords
