@@ -7,6 +7,7 @@ across
 after
 again
 against
+ahahah
 all
 almost
 alone
@@ -15,10 +16,14 @@ already
 also
 although
 always
+am
 among
 an
 and
+anit
+anna
 another
+anti
 any
 anybody
 anyone
@@ -58,6 +63,7 @@ better
 between
 big
 both
+bout
 but
 by
 c
@@ -74,6 +80,7 @@ clear
 clearly
 come
 could
+cuz
 d
 dd
 ddd
@@ -165,6 +172,7 @@ he
 her
 here
 herself
+hey
 high
 high
 high
@@ -218,6 +226,7 @@ let
 lets
 like
 likely
+lol
 long
 longer
 longest
@@ -240,6 +249,7 @@ most
 mostly
 mr
 mrs
+ms
 much
 must
 my
@@ -304,13 +314,16 @@ parting
 parts
 per
 perhaps
+pf
 place
 places
+pm
 point
 pointed
 pointing
 points
 possible
+pr
 present
 presented
 presenting
@@ -362,6 +375,7 @@ since
 small
 smaller
 smallest
+smh
 so
 some
 somebody
@@ -415,10 +429,12 @@ two
 u
 uu
 uuu
+uc
 under
 until
 up
 upon
+ur
 us
 use
 used
@@ -427,6 +443,8 @@ v
 vv
 vvv
 very
+via
+vs
 w
 ww
 www
@@ -656,3 +674,4 @@ podrian
 podriais
 yo
 aquel
+
