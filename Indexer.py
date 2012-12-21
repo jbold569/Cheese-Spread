@@ -274,7 +274,7 @@ def LoadTweets(file_dict):
 				try:
 					total_pohs += hashtag_occurrences[keyword]
 					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf, 'df': document_freqs[keyword],\
-					'poh': hashtag_occurrences[keyword], 'entropy' = []}, upsert=True)
+					'poh': hashtag_occurrences[keyword], 'entropy' : []}, upsert=True)
 				except KeyError:
 					O_index.update({'date': Date, 'keyword': keyword}, {'date': Date, 'keyword': keyword, 'tf': tf, 'df': document_freqs[keyword],\
 					'poh': 0, 'entropy' = []}, upsert=True)
