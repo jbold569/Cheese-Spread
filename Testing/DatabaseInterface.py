@@ -11,7 +11,7 @@ class DatabaseInterface():
 		if not query: query = {'$and': [{"time_period": time_period}, {"keyword": keyword}, {"bound":bound}]}
 		return self.db['KeywordStatsCollection'].find(query)
 	
-	def queryTweets(self, start_time=None, end_time=None, bound=utilsUSA, query=None):
+	def queryTweets(self, start_time=None, end_time=None, bound=utils.USA, query=None):
 		if not query: query = {'$and':[{'date' : {'$gte': start_date}}, {'date' : {'$lte': event_end_date}}, {"bound":bound}]}
 		return self.db['TweetsCollection'].find(query)
 	
@@ -23,19 +23,19 @@ class DatabaseInterface():
 	def updateKeywordStats(self, data):
 		if type(data) == type(KeywordStat):
 			data = data.toDBObject()
-		self.db['KeywordStatsCollection'].update(data, upsert=True)
+		self.db['KeywordStatsCollection'].update(data[0], data[1], upsert=True)
 	
 	#expects a Tweet Object
 	def updateTweets(self, data):
 		if type(data) == type(Tweet):
 			data = data.toDBObject()
-		self.db['TweetsCollection'].update(data, upsert=True)
+		self.db['TweetsCollection'].update(data[0], data[1], upsert=True)
 	
 	#expects a TimePeriodStat Object	
 	def updateTimePeriodStats(self, data):
 		if type(data) == type(TimePeriodStat):
 			data = data.toDBObject()
-		self.db['TimePeriodStatsCollection'].update(data, upsert=True)
+		self.db['TimePeriodStatsCollection'].update(data[0], data[1], upsert=True)
 		
 	def index(self):
 		self.db['KeywordStatsCollection'].ensure_index([('date',1), ('keywords',1), ("bound",1)], background=True)

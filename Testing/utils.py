@@ -15,7 +15,7 @@ def assignBounds(location):
 		lng = location['lng']
 		if lat <= 48 and lat >= 25 and lng >= -125 and lng <= -66:
 			return USA
-		else
+		else:
 			return UNK
 
 	tweets_outbound += 1

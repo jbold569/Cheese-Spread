@@ -46,9 +46,9 @@ class Tweet:
 			self.user = dTweet['user']['id']
 			self.follower_count = dTweet['user']['followers_count']
 
-			except KeyError as e:
-				self.valid = False
-				
+		except KeyError as e:
+			self.valid = False
+			
 		def __str__(self):
 			return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
 
@@ -71,11 +71,11 @@ class Tweet:
 				'follower_count': self.follower_count,
 				'bound': self.bound
 			}
-			data = {'_id': self.id, temp_dict}
+			data = ({'_id': self.id}, temp_dict)
 			return data
 
 class KeywordStat:
-	def __init__(self, keyword, time_period, bound=utils.UNK, poh=0)
+	def __init__(self, keyword, time_period, bound=utils.UNK, poh=0):
 		self.keyword = keyword
 		self.time_period = time_period
 		self.bound = bound
@@ -85,14 +85,27 @@ class KeywordStat:
 		self.entropy = []
 	
 	# Increases document and term frequencies simultaneously
-	def incFreqs(n=1):
+	def incFreqs(self, n=1):
 		self.doc_freq += 1
 		self.term_freq += n
 	
-	def setEntropy(entro):
+	def setEntropy(self, entro):
 		self.entropy = entro
 	
-	
+	def toDBObject(self):
+		temp_dict = {
+			"keyword" : self.keyword,
+			"df" : self.doc_freq,
+			"bound" : self.bound,
+			"tf" : self.term_freq,
+			"entropy" : [ ],
+			"poh" : self.poh,
+			"time_period" : self.time_period
+		}
+		
+		data = ({"$and":[{'time_period': self.time_period}, {'keyword': self.keyword}, {'bound': self.bound}]}, temp_dict)
+		return data
+		
 class TimePeriodStat:
 	def __init__(self, time_period, bound = utils.UNK):
 		self.time_period = time_period
@@ -101,12 +114,24 @@ class TimePeriodStat:
 		self.total_tweets = 0
 		self.total_keywords = 0
 	
-	def incHashtags(n=1):
+	def incHashtags(self, n=1):
 		self.total_hashtags += n
 	
-	def incTweets(n=1):
+	def incTweets(self, n=1):
 		self.total_tweets += n
 		
-	def incKeywords(n=1):
+	def incKeywords(self, n=1):
 		self.total_keywords += n
+	
+	def toDBObject(self):
+		temp_dict = {
+			"time_period" : self.time_period,
+			"total_hashtags" : self.total_hashtags,
+			"total_tweets" : self.total_tweets,
+			"bound" : self.bound,
+			"total_keywords" : self.total_keywords
+		}
+		
+		data = ({"$and":[{'time_period': self.time_period}, {'bound': self.bound}]}, temp_dict)
+		return data
 		

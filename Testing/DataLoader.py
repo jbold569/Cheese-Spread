@@ -1,9 +1,7 @@
 from DataObjects import *
 import DatabaseInterface as dbi
 import datetime as dt
-import utils
-import json
-import gzip
+import utils, json, gzip, os, sys
 
 class DataLoader():
 	def __init__(self, index=False, path='/mnt/chevron/jason/tweets/test'):
@@ -62,7 +60,8 @@ class DataLoader():
 							dKeywordStats[word] = KeywordStat(tag, time_period, bound=utils.USA, poh=1)
 							dKeywordStats[word].incFreqs()
 							tpsObj.incHashtags()
-			
+				except:
+					print "Bad JSON"
 			# Update Statistics
 			for statObj in dKeywordStats.values():
 				self.DBI.updateKeywordStats(statObj)
