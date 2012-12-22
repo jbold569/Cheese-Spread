@@ -6,7 +6,7 @@ import utils, json, gzip, os, sys, Probe
 probe = Probe.Probe()
 
 class DataLoader():
-	def __init__(self, index=False, path='/mnt/chevron/jason/tweets/test'):
+	def __init__(self, index=False, path='/mnt/chevron/jason/tweets/3'):
 		self.filenames = []
 		for path, names, files in os.walk(path):
 			for file in files:
