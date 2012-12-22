@@ -93,6 +93,7 @@ class DataLoader():
 
 def main():
 	probe.InitProbe("parsedLine", "%.3f tweets parsed a second.", 10)
+	probe.RunProbes()
 	loader = DataLoader(index=True)
 	loader.loadTweets()
 
