@@ -49,7 +49,7 @@ class Tweet:
 
 		except KeyError as e:
 			print "Bad tweet data"
-			print  dTweet
+			print  e
 			self.valid = False
 			
 		def __str__(self):
