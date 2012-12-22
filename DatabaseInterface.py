@@ -20,29 +20,13 @@ class DatabaseInterface():
 		return self.db['TimePeriodStatsCollection'].find(query)
 	
 	#expects a KeywordStat Object
-	def updateKeywordStats(self, data):
+	def updateDatabase(self, data, collection):
 		try:
 			dataObj = data.toDBObject()
-			self.db['KeywordStatsCollection'].update(dataObj[0], dataObj[1], upsert=True)
+			self.db[collection].update(dataObj[0], dataObj[1], upsert=True)
 		except AttributeError:
-			self.db['KeywordStatsCollection'].update(data[0], data[1], upsert=True)
+			self.db[collection].update(data[0], data[1], upsert=True)
 	
-	#expects a Tweet Object
-	def updateTweets(self, data):
-		try:
-			dataObj = data.toDBObject()
-			self.db['TweetsCollection'].update(dataObj[0], dataObj[1], upsert=True)
-		except AttributeError:
-			self.db['TweetsCollection'].update(data[0], data[1], upsert=True)
-	
-	#expects a TimePeriodStat Object	
-	def updateTimePeriodStats(self, data):
-		try:
-			dataObj = data.toDBObject()
-			self.db['TimePeriodStatsCollection'].update(dataObj[0], dataObj[1], upsert=True)
-		except AttributeError:
-			self.db['TimePeriodStatsCollection'].update(data[0], data[1], upsert=True)
-		
 	def index(self):
 		self.db['KeywordStatsCollection'].ensure_index([('date',1), ('keywords',1), ("bound",1)], background=True)
 		self.db['TweetsCollection'].ensure_index([('date',1), ('keyword',1), ("bound",1)], background=True)
