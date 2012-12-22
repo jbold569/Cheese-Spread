@@ -34,7 +34,7 @@ class Tweet:
 
 			
 			if dTweet['coordinates']:
-				self.location = {'type': dTweet['coordinates']['type'], 'shape': None, 'lat': dTweet['coordinates']['coordinates'][1], 'lng': dTweet['cooordinates']['coordinates'][0]}
+				self.location = {'type': dTweet['coordinates']['type'], 'shape': None, 'lat': dTweet['coordinates']['coordinates'][1], 'lng': dTweet['coordinates']['coordinates'][0]}
 			elif dTweet['place']:
 				shape = []
 				for coord in dTweet['place']['bounding_box']['coordinates'][0]:
