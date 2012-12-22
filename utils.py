@@ -23,7 +23,7 @@ def assignBounds(location):
 	return False
 
 # Need to make tests for this function
-def WordFilter(words):
+def wordFilter(words):
 
 	punc = re.compile('[%s]'%re.escape(string.punctuation))
 	num = re.compile('[%s]'%re.escape(string.digits))
@@ -39,20 +39,21 @@ def WordFilter(words):
 		if len(word) > 20:
 			continue
 
-		temp_word = punc.sub('',word)
-		temp_word = num.sub('',temp_word)
-
-		# ignore unicode
-		if re.search(alpha, word) != None:
-			continue
-		  # ignore url
+		# ignore url
 		if u'http' in word:
 			continue
 
 		# ignore mentions
 		if word[0] == '@':
 			continue
-
+		
+		temp_word = punc.sub('',word)
+		temp_word = num.sub('',temp_word)
+		
+		# ignore unicode
+		if re.search(alpha, temp_word) != None:
+			continue
+		
 		# ignore stopwords
 		try:
 			if temp_word in stopwords:

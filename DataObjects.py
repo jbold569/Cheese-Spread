@@ -8,7 +8,7 @@ class Tweet:
 			self.id = dTweet['id']
 			self.retweet_count = dTweet['retweet_count']
 			self.contents = dTweet['text'].lower()
-			keywords = utils.WordFilter(self.contents.split())
+			keywords = utils.wordFilter(self.contents.split())
 			self.keywords = list(set(keywords))
 			self.dTermFreqs = {}
 			for word in self.keywords:

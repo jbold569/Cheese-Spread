@@ -25,7 +25,7 @@ class DataLoader():
 		
 		for filename in self.filenames:
 			time_period = utils.parseTimePeriod(filename)
-			
+			print time_period
 			file = gzip.open(filename, 'r')
 			print "Loading: " + filename
 			
