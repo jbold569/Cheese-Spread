@@ -21,21 +21,26 @@ class DatabaseInterface():
 	
 	#expects a KeywordStat Object
 	def updateKeywordStats(self, data):
-		if type(data) == type(KeywordStat):
+		try:
 			data = data.toDBObject()
+		except AttributeError:
+			pass
 		self.db['KeywordStatsCollection'].update(data[0], data[1], upsert=True)
 	
 	#expects a Tweet Object
 	def updateTweets(self, data):
-		if type(data) == type(Tweet):
+		try:
 			data = data.toDBObject()
+		except AttributeError:
+			pass
 		self.db['TweetsCollection'].update(data[0], data[1], upsert=True)
 	
 	#expects a TimePeriodStat Object	
 	def updateTimePeriodStats(self, data):
-		if type(data) == type(TimePeriodStat):
+		try:
 			data = data.toDBObject()
-			print "Entered"
+		except AttributeError:
+			pass
 		self.db['TimePeriodStatsCollection'].update(data[0], data[1], upsert=True)
 		
 	def index(self):

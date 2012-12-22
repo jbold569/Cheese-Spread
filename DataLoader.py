@@ -83,7 +83,7 @@ class DataLoader():
 					tfs.append(data[1][keyword].term_freq)
 				except KeyError:
 					tfs.append(0)
-			self.DBI.updateKeywordStats({"$and":[{'date': e_date}, {'keyword': keyword}]}, {'$set': {'entropy': tfs}})
+			self.DBI.updateKeywordStats(({"$and":[{'date': e_date}, {'keyword': keyword}]}, {'$set': {'entropy': tfs}}))
 		self.keywordStats.pop(0)
 
 def main():
