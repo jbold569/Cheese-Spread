@@ -58,13 +58,14 @@ class DataLoader():
 						tpsObj.incKeywords()
 				
 				for tag in tweetObj.hashtags:
-					print tag
 					try:
 						dKeywordStats[word].incFreqs()
 					except KeyError:
+						print tag
 						dKeywordStats[word] = KeywordStat(tag, time_period, bound=utils.USA, poh=1)
 						dKeywordStats[word].incFreqs()
 						tpsObj.incHashtags()
+			
 			# Update Statistics
 			for statObj in dKeywordStats.values():
 				probe.StartTiming("LoadedKeywordStats")
