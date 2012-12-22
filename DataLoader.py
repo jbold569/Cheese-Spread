@@ -50,22 +50,17 @@ class DataLoader():
 					
 				# Update Keyword Stats
 				for word, term_freq in tweetObj.dTermFreqs.iteritems():
+					poh = 0
+					if word in tweetObj.hashtags:
+						poh = 1
+						tpsObj.incHashtags()
 					try:
 						dKeywordStats[word].incFreqs(term_freq)
 					except KeyError:
-						dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA)
+						dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
 						dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
 				
-				for tag in tweetObj.hashtags:
-					try:
-						dKeywordStats[word].incFreqs()
-					except KeyError:
-						print tag
-						dKeywordStats[word] = KeywordStat(tag, time_period, bound=utils.USA, poh=1)
-						dKeywordStats[word].incFreqs()
-						tpsObj.incHashtags()
-			
 			# Update Statistics
 			for statObj in dKeywordStats.values():
 				probe.StartTiming("LoadedKeywordStats")
@@ -97,7 +92,7 @@ class DataLoader():
 
 def main():
 	probe.InitProbe("LoadedTweets", "%.3f tweets loaded a second.", 10)
-	probe.InitProbe("LoadedKeywordStats", "%.3f tweets loaded a second.", 10)
+	probe.InitProbe("LoadedKeywordStats", "%.3f Keyword Statistics loaded a second.", 10)
 	
 	probe.RunProbes()
 	loader = DataLoader(index=True)
