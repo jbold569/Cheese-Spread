@@ -37,12 +37,12 @@ class DataLoader():
 			dKeywordStats = {}
 			
 			for line in file:
-				probe.StartTiming("parsedLine")
+				probe.StartTiming("LoadedTweets")
 				tweetObj = Tweet(json.loads(line))
-				probe.StopTiming("parsedLine")
 				# Check if tweet is valid
 				if tweetObj.valid and tweetObj.bound == utils.USA:
 					self.DBI.updateDatabase(tweetObj, "TweetsCollection")
+					probe.StopTiming("LoadedTweets")
 					tpsObj.incTweets()
 				else:
 					#print "Invalid Tweet"
@@ -58,6 +58,7 @@ class DataLoader():
 						tpsObj.incKeywords()
 				
 				for tag in tweetObj.hashtags:
+					print tag
 					try:
 						dKeywordStats[word].incFreqs()
 					except KeyError:
@@ -66,7 +67,9 @@ class DataLoader():
 						tpsObj.incHashtags()
 			# Update Statistics
 			for statObj in dKeywordStats.values():
+				probe.StartTiming("LoadedKeywordStats")
 				self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
+				probe.StopTiming("LoadedKeywordStats")
 			
 			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
@@ -92,7 +95,9 @@ class DataLoader():
 		self.keywordStats.pop(0)
 
 def main():
-	probe.InitProbe("parsedLine", "%.3f tweets parsed a second.", 10)
+	probe.InitProbe("LoadedTweets", "%.3f tweets loaded a second.", 10)
+	probe.InitProbe("LoadedKeywordStats", "%.3f tweets loaded a second.", 10)
+	
 	probe.RunProbes()
 	loader = DataLoader(index=True)
 	loader.loadTweets()
