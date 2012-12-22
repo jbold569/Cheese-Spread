@@ -48,10 +48,8 @@ class Tweet:
 			self.follower_count = dTweet['user']['followers_count']
 
 		except KeyError as e:
-			print "Bad tweet data"
-			print  e
-			print dTweet.keys()
-			x = raw_input("Stop")
+			# This occurs when twitter returns a json packet with limit as the only attribute
+			#print "Bad tweet data"
 			self.valid = False
 			
 	def __str__(self):
