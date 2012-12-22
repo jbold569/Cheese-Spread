@@ -21,7 +21,6 @@ class DatabaseInterface():
 	
 	#expects a KeywordStat Object
 	def updateDatabase(self, data, collection):
-		print data
 		try:
 			dataObj = data.toDBObject()
 			self.db[collection].update(dataObj[0], dataObj[1], upsert=True)
