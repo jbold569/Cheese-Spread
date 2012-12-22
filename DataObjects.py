@@ -5,6 +5,8 @@ class Tweet:
 	def __init__(self, dTweet):
 		try:
 			# Information about the tweet
+			print dTweet.keys()
+			x = raw_input("Stop")
 			self.id = dTweet['id']
 			self.retweet_count = dTweet['retweet_count']
 			self.contents = dTweet['text'].lower()
