@@ -54,30 +54,30 @@ class Tweet:
 			x = raw_input("Stop")
 			self.valid = False
 			
-		def __str__(self):
-			return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
+	def __str__(self):
+		return "Location type: {0} at ({1}, {2})".format(self.location['type'], self.location['lat'], self.location['lat'])
 
-		# This function returns a list of dictionaries of the same tweet on with
-		# different keywords
-		def toDBObject(self):
-			temp_dict = {
-				'_id' : self.id,
-				'contents' : self.contents,
-				'hashtags' : self.hashtags,
-				'date' : self.date,
-				'location' : self.location,
-				'valid' : self.valid,
-				'keywords' : self.keywords,
-				'dTermFreqs': self.dTermFreqs,
-				'urls': self.urls,
-				'retweet_count': self.retweet_count,
-				'user_mentions': self.user_mentions,
-				'user': self.user,
-				'follower_count': self.follower_count,
-				'bound': self.bound
-			}
-			data = ({'_id': self.id}, temp_dict)
-			return data
+	# This function returns a list of dictionaries of the same tweet on with
+	# different keywords
+	def toDBObject(self):
+		temp_dict = {
+			'_id' : self.id,
+			'contents' : self.contents,
+			'hashtags' : self.hashtags,
+			'date' : self.date,
+			'location' : self.location,
+			'valid' : self.valid,
+			'keywords' : self.keywords,
+			'dTermFreqs': self.dTermFreqs,
+			'urls': self.urls,
+			'retweet_count': self.retweet_count,
+			'user_mentions': self.user_mentions,
+			'user': self.user,
+			'follower_count': self.follower_count,
+			'bound': self.bound
+		}
+		data = ({'_id': self.id}, temp_dict)
+		return data
 
 class KeywordStat:
 	def __init__(self, keyword, time_period, bound=utils.UNK, poh=0):
