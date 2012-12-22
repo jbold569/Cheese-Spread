@@ -68,7 +68,7 @@ class DataLoader():
 			for statObj in dKeywordStats.values():
 				self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
 			
-			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsColleciton")
+			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
 			# Handle Entropy
 			self.keywordStats.append((time_period, dKeywordStats))
