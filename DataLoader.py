@@ -1,7 +1,9 @@
 from DataObjects import *
 import DatabaseInterface as dbi
 import datetime as dt
-import utils, json, gzip, os, sys
+import utils, json, gzip, os, sys, Probe
+
+probe = Probe.Probe()
 
 class DataLoader():
 	def __init__(self, index=False, path='/mnt/chevron/jason/tweets/test'):
@@ -35,12 +37,15 @@ class DataLoader():
 			dKeywordStats = {}
 			
 			for line in file:
+				probe.StartTiming("parsedLine")
 				tweetObj = Tweet(json.loads(line))
+				probe.StopTiming("parsedLine")
 				# Check if tweet is valid
 				if tweetObj.valid and tweetObj.bound == utils.USA:
 					self.DBI.updateTweets(tweetObj)
 					tpsObj.incTweets()
 				else:
+					print "Invalid Tweet"
 					continue
 					
 				# Update Keyword Stats
@@ -87,6 +92,7 @@ class DataLoader():
 		self.keywordStats.pop(0)
 
 def main():
+	probe.InitProbe("parsedLine", "%.3f tweets parsed a second.", 10)
 	loader = DataLoader(index=True)
 	loader.loadTweets()
 
