@@ -42,7 +42,7 @@ class DataLoader():
 				probe.StopTiming("parsedLine")
 				# Check if tweet is valid
 				if tweetObj.valid and tweetObj.bound == utils.USA:
-					self.DBI.updateTweets(tweetObj)
+					self.DBI.updateDatabase(tweetObj, "TweetsCollection")
 					tpsObj.incTweets()
 				else:
 					#print "Invalid Tweet"
@@ -66,9 +66,9 @@ class DataLoader():
 						tpsObj.incHashtags()
 			# Update Statistics
 			for statObj in dKeywordStats.values():
-				self.DBI.updateKeywordStats(statObj)
+				self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
 			
-			self.DBI.updateTimePeriodStats(tpsObj)
+			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsColleciton")
 			
 			# Handle Entropy
 			self.keywordStats.append((time_period, dKeywordStats))
@@ -88,7 +88,7 @@ class DataLoader():
 					tfs.append(data[1][keyword].term_freq)
 				except KeyError:
 					tfs.append(0)
-			self.DBI.updateKeywordStats(({"$and":[{'date': e_date}, {'keyword': keyword}]}, {'$set': {'entropy': tfs}}))
+			self.DBI.updateDatabase(({"$and":[{'date': e_date}, {'keyword': keyword}]}, {'$set': {'entropy': tfs}}), "KeywordStatsCollection")
 		self.keywordStats.pop(0)
 
 def main():
