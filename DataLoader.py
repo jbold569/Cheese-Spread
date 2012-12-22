@@ -45,7 +45,7 @@ class DataLoader():
 					self.DBI.updateTweets(tweetObj)
 					tpsObj.incTweets()
 				else:
-					print "Invalid Tweet"
+					#print "Invalid Tweet"
 					continue
 					
 				# Update Keyword Stats

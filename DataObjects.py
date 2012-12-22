@@ -48,6 +48,7 @@ class Tweet:
 			self.follower_count = dTweet['user']['followers_count']
 
 		except KeyError as e:
+			print "Bad tweet data"
 			self.valid = False
 			
 		def __str__(self):
