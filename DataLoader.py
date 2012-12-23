@@ -62,6 +62,9 @@ class DataLoader():
 						tpsObj.incKeywords()
 				
 			# Update Statistics
+			print "All tweets loaded"
+			print "Total keywords parsed: " + str(len(dKeywordStats))
+			
 			for statObj in dKeywordStats.values():
 				probe.StartTiming("DictionaryConversion")
 				dictObj = statObj.toDBObject()
