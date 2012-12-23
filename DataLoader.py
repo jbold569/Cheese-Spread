@@ -65,7 +65,7 @@ class DataLoader():
 			for statObj in dKeywordStats.values():
 				probe.StartTiming("DictionaryConversion")
 				dictObj = statObj.toDBObject()
-				probe.StopTIming("DictionaryConversion")
+				probe.StopTiming("DictionaryConversion")
 				probe.StartTiming("LoadedKeywordStats")
 				self.DBI.updateDatabase(dictObj, "KeywordStatsCollection")
 				probe.StopTiming("LoadedKeywordStats")
