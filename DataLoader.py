@@ -69,14 +69,15 @@ class DataLoader():
 			
 			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
-			# Handle Entropy
-			self.keywordStats.append((time_period, dKeywordStats))
-			if len(self.keywordStats) == 7:
-				self.updateEntropy()
+			# Handle Entropy (Broken)
+			#self.keywordStats.append((time_period, dKeywordStats))
+			#if len(self.keywordStats) == 7:
+				#self.updateEntropy()
 				
 			# Close the file of tweets
 			file.close()
-			
+	
+	# (Broken)
 	def updateEntropy(self):
 		# middle time period
 		e_date = self.keywordStats[3][0]
