@@ -63,8 +63,11 @@ class DataLoader():
 				
 			# Update Statistics
 			for statObj in dKeywordStats.values():
+				probe.StartTiming("dictionaryConversion")
+				dictObj = statObj.toDBObject()
+				probe.StopTIming("dictionaryConversion")
 				probe.StartTiming("LoadedKeywordStats")
-				self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
+				self.DBI.updateDatabase(dictObj, "KeywordStatsCollection")
 				probe.StopTiming("LoadedKeywordStats")
 			
 			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
@@ -94,6 +97,7 @@ class DataLoader():
 def main():
 	probe.InitProbe("LoadedTweets", "%.3f tweets loaded a second.", 10)
 	probe.InitProbe("LoadedKeywordStats", "%.3f Keyword Statistics loaded a second.", 10)
+	probe.InitProbe("DictionaryConversion", "%.3f Keyword Statistics Converted a second.", 5)
 	
 	probe.RunProbes()
 	loader = DataLoader(index=True)

@@ -25,6 +25,7 @@ class DatabaseInterface():
 			dataObj = data.toDBObject()
 			self.db[collection].update(dataObj[0], dataObj[1], upsert=True)
 		except AttributeError:
+			print "User defined insert"
 			self.db[collection].update(data[0], data[1], upsert=True)
 	
 	def index(self):
