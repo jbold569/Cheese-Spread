@@ -65,14 +65,10 @@ class DataLoader():
 			print "All tweets loaded"
 			print "Total keywords parsed: " + str(len(dKeywordStats))
 			
-			for statObj in dKeywordStats.values():
-				probe.StartTiming("DictionaryConversion")
-				dictObj = statObj.toDBObject()
-				probe.StopTiming("DictionaryConversion")
-				probe.StartTiming("LoadedKeywordStats")
-				self.DBI.updateDatabase(dictObj, "KeywordStatsCollection")
-				probe.StopTiming("LoadedKeywordStats")
-			
+			for word, statObj in dKeywordStats.iteritems():
+				print "Inserting: " + word
+				self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
+				
 			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
 			# Handle Entropy (Broken)
