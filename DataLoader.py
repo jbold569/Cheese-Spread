@@ -25,6 +25,7 @@ class DataLoader():
 		
 		for filename in self.filenames:
 			time_period = utils.parseTimePeriod(filename)
+			time_period_end = time_period + dt.timedelta(minutes=15)
 			print time_period
 			file = gzip.open(filename, 'r')
 			print "Loading: " + filename
@@ -44,30 +45,36 @@ class DataLoader():
 					self.DBI.updateDatabase(tweetObj, "TweetsCollection")
 					probe.StopTiming("LoadedTweets")
 					tpsObj.incTweets()
+					#if tweetObj.date<time_period or tweetObj.date>time_period_end:
+                                        #	print "Sanity Check Failed:"
+					#	print time_period
+					#	print time_period_end
+					#	print tweetObj.date
+					#	x = raw_input("Next")
 				else:
 					#print "Invalid Tweet"
 					continue
 					
 				# Update Keyword Stats
 				for word, term_freq in tweetObj.dTermFreqs.iteritems():
-					poh = 0
+				#	poh = 0
 					if word in tweetObj.hashtags:
-						poh = 1
+				#		poh = 1
 						tpsObj.incHashtags()
 					try:
-						dKeywordStats[word].incFreqs(term_freq)
+						pass
+				#		dKeywordStats[word].incFreqs(term_freq)
 					except KeyError:
-						dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
-						dKeywordStats[word].incFreqs(term_freq)
+				#		dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
+				#		dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
 				
 			# Update Statistics
 			print "All tweets loaded"
-			print "Total keywords parsed: " + str(len(dKeywordStats))
+			#print "Total keywords parsed: " + str(len(dKeywordStats))
 			
-			for word, statObj in dKeywordStats.iteritems():
-				print "Inserting: " + word
-				self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
+			#for word, statObj in dKeywordStats.iteritems():
+			#	self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
 				
 			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
