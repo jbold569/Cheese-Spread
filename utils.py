@@ -10,7 +10,7 @@ def parseTimePeriod(filename):
 	date, time = raw_date.split('_')
 	date = [int(i) for i in date.split('-')]
 	time = [int(i) for i in time.split('-')]
-	return (dt.datetime(date[0], date[1], date[2], time[0], time[1]) + dt.timedelta(hours=5))
+	return (dt.datetime(date[0], date[1], date[2], time[0], time[1]) + dt.timedelta(hours=5, minutes=10))
 				
 def assignBounds(location):
 	if not location['shape']:

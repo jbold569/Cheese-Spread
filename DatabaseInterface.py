@@ -28,6 +28,14 @@ class DatabaseInterface():
 			#print "User defined insert"
 			self.db[collection].update(data[0], data[1], upsert=True)
 	
+	def insertToDatabase(self, data, collection):
+		try:
+			dataObjs = [ obj.toDBObject()[1] for obj in data ]
+			if len(dataObjs) == 0: return False
+			self.db[collection].insert(dataObjs)
+		except AttributeError:
+			self.db[collection].insert(data)
+
 	def index(self):
 		self.db['KeywordStatsCollection'].ensure_index([('date',1), ('keywords',1), ("bound",1)], background=True)
 		self.db['TweetsCollection'].ensure_index([('date',1), ('keyword',1), ("bound",1)], background=True)

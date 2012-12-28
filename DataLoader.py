@@ -6,13 +6,13 @@ import utils, json, gzip, os, sys, Probe
 probe = Probe.Probe()
 
 class DataLoader():
-	def __init__(self, index=False, path='/mnt/chevron/jason/tweets/3'):
+	def __init__(self, index=False, path='/mnt/chevron/bde/Data/TweetData/GeoTweets/2012/5'):
 		self.filenames = []
 		for path, names, files in os.walk(path):
 			for file in files:
 				self.filenames.append(os.path.join(path, file))
 		self.DBI = dbi.DatabaseInterface()
-		
+		self.filenames.sort(key=lambda filename:utils.parseTimePeriod(filename)) 
 		# Used to handle entropy
 		self.keywordStats = []
 		
@@ -22,10 +22,10 @@ class DataLoader():
 	def loadTweets(self):
 		# This will be used for entropy
 		keywordStats = []
-		
 		for filename in self.filenames:
 			time_period = utils.parseTimePeriod(filename)
-			time_period_end = time_period + dt.timedelta(minutes=15)
+			time_period_end = time_period + dt.timedelta(minutes=16)
+			print "\nLoading time period: ",
 			print time_period
 			file = gzip.open(filename, 'r')
 			print "Loading: " + filename
@@ -36,52 +36,62 @@ class DataLoader():
 			# Dictionary of Keyword Stats
 			# Structure { keyword: keywordObj, ...}
 			dKeywordStats = {}
-			
+			out = -1
+			last_date = None
 			for line in file:
 				probe.StartTiming("LoadedTweets")
-				tweetObj = Tweet(json.loads(line))
+				try:
+					tweetObj = Tweet(json.loads(line))
+					if out == -1:
+						out+=1
+						print "First tweet: ",
+						print tweetObj.date
+				except ValueError as e:
+					print e
 				# Check if tweet is valid
 				if tweetObj.valid and tweetObj.bound == utils.USA:
 					self.DBI.updateDatabase(tweetObj, "TweetsCollection")
 					probe.StopTiming("LoadedTweets")
 					tpsObj.incTweets()
-					#if tweetObj.date<time_period or tweetObj.date>time_period_end:
-                                        #	print "Sanity Check Failed:"
-					#	print time_period
-					#	print time_period_end
-					#	print tweetObj.date
-					#	x = raw_input("Next")
+					last_date = tweetObj.date
+					if tweetObj.date<time_period or tweetObj.date>time_period_end:
+                                        	out+=1
 				else:
 					#print "Invalid Tweet"
 					continue
 					
 				# Update Keyword Stats
 				for word, term_freq in tweetObj.dTermFreqs.iteritems():
-				#	poh = 0
+					poh = 0
 					if word in tweetObj.hashtags:
-				#		poh = 1
+						poh = 1
 						tpsObj.incHashtags()
 					try:
 						pass
-				#		dKeywordStats[word].incFreqs(term_freq)
+						dKeywordStats[word].incFreqs(term_freq)
 					except KeyError:
-				#		dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
-				#		dKeywordStats[word].incFreqs(term_freq)
+						dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
+						dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
-				
+			
+			print "Number of tweets loaded: " + str(tpsObj.total_tweets)
+			print "Number of tweets outside time period: ",
+			print out
+			print "Date of last tweet: ",
+			print last_date
 			# Update Statistics
 			print "All tweets loaded"
-			#print "Total keywords parsed: " + str(len(dKeywordStats))
+			print "Total keywords parsed: " + str(len(dKeywordStats))
 			
-			#for word, statObj in dKeywordStats.iteritems():
-			#	self.DBI.updateDatabase(statObj, "KeywordStatsCollection")
+			self.DBI.insertToDatabase(dKeywordStats.values(), "KeywordStatsCollection")
 				
 			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
 			# Handle Entropy (Broken)
-			#self.keywordStats.append((time_period, dKeywordStats))
-			#if len(self.keywordStats) == 7:
-				#self.updateEntropy()
+			self.keywordStats.append((time_period, dKeywordStats))
+			if len(self.keywordStats) == 7:
+				print "Calculating Entropy"
+				self.updateEntropy()
 				
 			# Close the file of tweets
 			file.close()
@@ -97,7 +107,8 @@ class DataLoader():
 					tfs.append(data[1][keyword].term_freq)
 				except KeyError:
 					tfs.append(0)
-			self.DBI.updateDatabase(({"$and":[{'date': e_date}, {'keyword': keyword}]}, {'$set': {'entropy': tfs}}), "KeywordStatsCollection")
+			self.DBI.updateDatabase(({"$and":[{'date': e_date}, {'keyword': keyword}, {'bound': utils.USA}]}, {'$set': {'entropy': tfs}}), "KeywordStatsCollection")
+			print self.DBI.queryKeywordStats(time_period = e_date, keyword=keyword)[0]			
 		self.keywordStats.pop(0)
 
 def main():

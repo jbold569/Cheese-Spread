@@ -101,7 +101,7 @@ class KeywordStat:
 			"df" : self.doc_freq,
 			"bound" : self.bound,
 			"tf" : self.term_freq,
-			"entropy" : [ ],
+			"entropy" : self.entropy,
 			"poh" : self.poh,
 			"time_period" : self.time_period
 		}
