@@ -23,21 +23,20 @@ class Server(object):
 		start  = startDate
 		end = endDate
 		tokens = start.split('-')
-		event_start_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]))
+		event_start_date = datetime(2012, 3, 28, 9, 18)
 		tokens = end.split('-')
-		event_end_date = datetime(int(tokens[2]), int(tokens[1]), int(tokens[0]), 23, 59, 59)
+		event_end_date = datetime(2012, 3, 28, 9, 18+15)
 		# Mongo sequence
 		print event_start_date
 		print event_end_date
 		
 		connection = Connection(host = 'hamm.cse.tamu.edu')
 		db = connection.GeoTaggedTweets
-		DK_index = db.DateKeywordCollection
-		
+		T_index = db.TweetsCollection
+		print T_index.find_one()
 		# Format {date: [tweet1, tweet2, ...], ...} 
 		desired_tweets = {}
-		temp = event_start_date
-		results = DK_index.find({'$and':[{'date' : {'$gte': event_start_date}}, {'date' : {'$lte': event_end_date}}, {"bound":"USA"}]}, limit=10)
+		results = T_index.find({'$and':[{'date' : {'$gte': event_start_date}}, {'date' : {'$lt': event_end_date}}, {"bound":1}]})
 		print "Results returned: ",
 		#while results:
 		print results.count(with_limit_and_skip=True)

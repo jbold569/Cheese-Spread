@@ -7,7 +7,7 @@ EVENT_ID = 1000000
 DIMENSION = 100
 ORIGIN = np.ones(DIMENSION)/DIMENSION**0.5
 database = None
-alpha, beta, gamma = 0.5, 0.1, 0.4 # tf-idf, poh, entro
+alpha, beta, gamma = 0.5, 0.5, 0.0 # tf-idf, poh, entro
 
 class Event:
 	def __init__(self, id, centroid):
@@ -137,7 +137,7 @@ def cluster(vecs):
 			
 def getStats(word, date, totals):
 	global database
-	occurrences, = database['OccurrencesCollection'].find({'$and': [{"date": date}, {"keyword": word}, {"bound":"USA"}]})
+	occurrences, = database['KeywordStatsCollection'].find({'$and': [{"date": date}, {"keyword": word}, {"bound":1}]})
 	from math import log10
 	df = float(occurrences['df'])/totals['total_tweets']
 	tf = occurrences['tf']
@@ -173,13 +173,13 @@ def getTopicalWords(date_tweet_pairs):
 		term_qualities[date] = []
 		keywords_set = []
 		print "Creating keyword set..."
-		results = database['OccurrencesCollection'].find({"$and":[{'date': date}, {"bound":"USA"}]}, limit=500)
+		results = database['KeywordStatsCollection'].find({"$and":[{'date': date}, {"bound":1}]})
 		for result in results:
 			keywords_set.append(result['keyword'])
 		print "Done creating set.\n"
 		
 		total_entropy = 0.0
-		totals, = database['KeywordCountCollection'].find({"$and":[{"date": date}, {"bound":"USA"}]}, limit=500)
+		totals, = database['TimePeriodStatsCollection'].find({"$and":[{"date": date}, {"bound":1}]})
 		for word in keywords_set:
 			idf,poh,entro = getStats(word, date, totals)
 			term_qualities[date].append((word, alpha*idf+beta*poh+gamma*entro)) 
@@ -238,7 +238,7 @@ def FindEvents(tweets, db):
 	# Structure of ordered_tweets {date: {_id:tweet1,..}, ...} 
 	ordered_tweets = {}
 	for tweet in tweets:		
-			day = dt.datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day)
+			day = dt.datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day, 4, 18)
 			try:
 				ordered_tweets[day][tweet['_id']] = tweet
 			except KeyError:
