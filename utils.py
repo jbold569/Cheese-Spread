@@ -1,17 +1,21 @@
 import re,string
-
+import datetime as dt
+	
 UNK, USA = range(2)
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 
 # Parses the time period from the filename
 def parseTimePeriod(filename):
-	import datetime as dt
 	raw_date = filename.split('.')[1]
 	date, time = raw_date.split('_')
 	date = [int(i) for i in date.split('-')]
 	time = [int(i) for i in time.split('-')]
 	return (dt.datetime(date[0], date[1], date[2], time[0], time[1]) + dt.timedelta(hours=5, minutes=10))
-				
+
+
+def inTimePeriod(time_period, date):
+	return time_period <= date and date < time_period + dt.datetime(minutes=15)
+		
 def assignBounds(location):
 	if not location['shape']:
 		lat = location['lat']

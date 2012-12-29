@@ -24,20 +24,19 @@ class DataLoader():
 		keywordStats = []
 		
 		time_period_seeded = False
+		
+		# These variables are persistant through different files due to overlap
+		# Time Period Stats Object
+		tpsObj = None
+		# Will be based off the first tweet
+		time_period = None
+		# Maximum size of 1000
+		tweets = []	
+		
 		for filename in self.filenames:
-			# Will be based off the first tweet
-			time_period = None
-			time_period_end = time_period + dt.timedelta(minutes=15)
-			print "\nLoading time period: ",
-			print time_period
-			file = gzip.open(filename, 'r')
 			print "Loading: " + filename
+			file = gzip.open(filename, 'r')
 			
-			# Time Period Stats
-			tpsObj = None
-			 # Time Period Stats
-                        tpsObj = TimePeriodStat(time_period, bound=utils.USA)
-
 			# Dictionary of Keyword Stats
 			# Structure { keyword: keywordObj, ...}
 			dKeywordStats = {}
@@ -49,22 +48,34 @@ class DataLoader():
 					tweetObj = Tweet(json.loads(line))
 					if not time_period_seeded:
 						time_period = tweetObj.date
-
-                        		time_period_end = time_period + dt.timedelta(minutes=15)
+						time_period_seeded = True			
+						print "\nStarting time period at: ",
+						print time_period
+						
 					if out == -1:
 						out+=1
 						print "First tweet: ",
 						print tweetObj.date
 				except ValueError as e:
 					print e
+				
+				if not utils.inTimePeriod(time_period, tweetObj.date):
+					time_period = time_period + dt.timedelta(minutes=15)									
+					print "\nChanging time period to: ",
+					print time_period
+					# Update Time Period Stats
+					self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
+					tpsObj = TimePeriodStat(time_period, bound=utils.USA)
+
 				# Check if tweet is valid
 				if tweetObj.valid and tweetObj.bound == utils.USA:
-					self.DBI.updateDatabase(tweetObj, "TweetsCollection")
+					tweets.append(tweetObj)
+					if len(tweets) == 1000:
+						DBI.insertToDatabase(tweets, "TweetsCollection")
+						tweets = []
 					probe.StopTiming("LoadedTweets")
 					tpsObj.incTweets()
 					last_date = tweetObj.date
-					if tweetObj.date<time_period or tweetObj.date>time_period_end:
-                                        	out+=1
 				else:
 					#print "Invalid Tweet"
 					continue
@@ -76,27 +87,21 @@ class DataLoader():
 						poh = 1
 						tpsObj.incHashtags()
 					try:
-						pass
 						dKeywordStats[word].incFreqs(term_freq)
 					except KeyError:
 						dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
 						dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
 			
-			print "Number of tweets loaded: " + str(tpsObj.total_tweets)
-			print "Number of tweets outside time period: ",
-			print out
-			print "Date of last tweet: ",
+			print "Number of tweets loaded from file: " + str(tpsObj.total_tweets)
+			print "Date of last tweet in file: ",
 			print last_date
-			# Update Statistics
-			print "All tweets loaded"
 			print "Total keywords parsed: " + str(len(dKeywordStats))
 			
+			# Update Keyword Statistics
 			self.DBI.insertToDatabase(dKeywordStats.values(), "KeywordStatsCollection")
-				
-			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
 			
-			# Handle Entropy (Broken)
+			# Handle Entropy
 			self.keywordStats.append((time_period, dKeywordStats))
 			if len(self.keywordStats) == 7:
 				print "Calculating Entropy"
@@ -105,7 +110,6 @@ class DataLoader():
 			# Close the file of tweets
 			file.close()
 	
-	# (Broken)
 	def updateEntropy(self):
 		# middle time period
 		e_date = self.keywordStats[3][0]
