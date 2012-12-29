@@ -85,7 +85,7 @@ class KeywordStat:
 		self.poh = poh
 		self.doc_freq = 0
 		self.term_freq = 0
-		self.entropy = []
+		self.entropy = [0,0,0,0,0,0,0]
 	
 	# Increases document and term frequencies simultaneously
 	def incFreqs(self, n=1):

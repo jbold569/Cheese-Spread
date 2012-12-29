@@ -22,17 +22,22 @@ class DataLoader():
 	def loadTweets(self):
 		# This will be used for entropy
 		keywordStats = []
+		
+		time_period_seeded = False
 		for filename in self.filenames:
-			time_period = utils.parseTimePeriod(filename)
-			time_period_end = time_period + dt.timedelta(minutes=16)
+			# Will be based off the first tweet
+			time_period = None
+			time_period_end = time_period + dt.timedelta(minutes=15)
 			print "\nLoading time period: ",
 			print time_period
 			file = gzip.open(filename, 'r')
 			print "Loading: " + filename
 			
 			# Time Period Stats
-			tpsObj = TimePeriodStat(time_period, bound=utils.USA)
-			
+			tpsObj = None
+			 # Time Period Stats
+                        tpsObj = TimePeriodStat(time_period, bound=utils.USA)
+
 			# Dictionary of Keyword Stats
 			# Structure { keyword: keywordObj, ...}
 			dKeywordStats = {}
@@ -42,6 +47,10 @@ class DataLoader():
 				probe.StartTiming("LoadedTweets")
 				try:
 					tweetObj = Tweet(json.loads(line))
+					if not time_period_seeded:
+						time_period = tweetObj.date
+
+                        		time_period_end = time_period + dt.timedelta(minutes=15)
 					if out == -1:
 						out+=1
 						print "First tweet: ",
@@ -107,8 +116,7 @@ class DataLoader():
 					tfs.append(data[1][keyword].term_freq)
 				except KeyError:
 					tfs.append(0)
-			self.DBI.updateDatabase(({"$and":[{'date': e_date}, {'keyword': keyword}, {'bound': utils.USA}]}, {'$set': {'entropy': tfs}}), "KeywordStatsCollection")
-			print self.DBI.queryKeywordStats(time_period = e_date, keyword=keyword)[0]			
+			self.DBI.updateDatabase(({"$and":[{'time_period': e_date}, {'keyword': keyword}, {'bound': utils.USA}]}, {'$set': {'entropy': tfs}}), "KeywordStatsCollection")		
 		self.keywordStats.pop(0)
 
 def main():
