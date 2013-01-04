@@ -43,11 +43,13 @@ class DataLoader():
 			out = -1
 			last_date = None
 			for line in file:
+				tweetObj = None
 				probe.StartTiming("LoadedTweets")
 				try:
 					tweetObj = Tweet(json.loads(line))
 					if not time_period_seeded:
-						time_period = tweetObj.date
+						time_period = tweetObj.date.replace(second=0)
+						tpsObj = TimePeriodStat(time_period, bound=utils.USA)
 						time_period_seeded = True			
 						print "\nStarting time period at: ",
 						print time_period
@@ -58,20 +60,24 @@ class DataLoader():
 						print tweetObj.date
 				except ValueError as e:
 					print e
+					continue
 				
-				if not utils.inTimePeriod(time_period, tweetObj.date):
-					time_period = time_period + dt.timedelta(minutes=15)									
-					print "\nChanging time period to: ",
-					print time_period
-					# Update Time Period Stats
-					self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
-					tpsObj = TimePeriodStat(time_period, bound=utils.USA)
+				if tweetObj.valid:			
+					if not utils.inTimePeriod(time_period, tweetObj.date):
+						time_period = time_period + dt.timedelta(minutes=15)
+						#print tweetObj.date
+						print "\nChanging time period to: ",
+						print time_period
+						#x = raw_input("Next")
+						# Update Time Period Stats
+						self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
+						tpsObj = TimePeriodStat(time_period, bound=utils.USA)
 
 				# Check if tweet is valid
 				if tweetObj.valid and tweetObj.bound == utils.USA:
 					tweets.append(tweetObj)
 					if len(tweets) == 1000:
-						DBI.insertToDatabase(tweets, "TweetsCollection")
+						self.DBI.insertToDatabase(tweets, "TweetsCollection")
 						tweets = []
 					probe.StopTiming("LoadedTweets")
 					tpsObj.incTweets()
@@ -93,7 +99,6 @@ class DataLoader():
 						dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
 			
-			print "Number of tweets loaded from file: " + str(tpsObj.total_tweets)
 			print "Date of last tweet in file: ",
 			print last_date
 			print "Total keywords parsed: " + str(len(dKeywordStats))

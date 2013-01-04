@@ -12,9 +12,8 @@ def parseTimePeriod(filename):
 	time = [int(i) for i in time.split('-')]
 	return (dt.datetime(date[0], date[1], date[2], time[0], time[1]) + dt.timedelta(hours=5, minutes=10))
 
-
 def inTimePeriod(time_period, date):
-	return time_period <= date and date < time_period + dt.datetime(minutes=15)
+	return date < time_period + dt.timedelta(minutes=15)
 		
 def assignBounds(location):
 	if not location['shape']:
