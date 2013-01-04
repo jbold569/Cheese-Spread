@@ -44,10 +44,13 @@ class DataLoader():
 				tweetObj = None
 				probe.StartTiming("LoadedTweets")
 				try:
-					tweetObj = Tweet(json.loads(line))			
+					tweetObj = Tweet(json.loads(line))
+					if not tweetObj.valid:
+						continue			
 					if not self.initial_time_period:
 						self.initial_time_period = utils.determineTimePeriod(tweetObj.date)
 						time_period = self.initial_time_period
+						tpsObj = TimePeriodStat(time_period, bound=utils.USA)
 						print "\nStarting time period at: ",
 						print self.initial_time_period
 						
@@ -69,7 +72,7 @@ class DataLoader():
 					tpsObj = TimePeriodStat(time_period, bound=utils.USA)
 
 				# Check if tweet is valid
-				if tweetObj.valid and tweetObj.bound == utils.USA:
+				if tweetObj.bound == utils.USA:
 					tweets.append(tweetObj)
 					if len(tweets) == 1000:
 						self.DBI.insertToDatabase(tweets, "TweetsCollection")
@@ -77,7 +80,7 @@ class DataLoader():
 					tpsObj.incTweets()
 					last_date = tweetObj.date
 				else:
-					#print "Invalid Tweet"
+					#print "Tweet out of bounds"
 					continue
 					
 				# Update Keyword Stats

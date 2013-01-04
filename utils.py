@@ -19,7 +19,7 @@ def inTimePeriod(time_period, date):
 	
 # Determines the appropriate time period to begin loading tweets
 def determineTimePeriod(tweet_date):
-	return tweet_date.replace(minute=15*(int(tweet_date.minutes/15)), second=0)
+	return tweet_date.replace(minute=15*(int(tweet_date.minute/15)), second=0)
 
 def assignBounds(location):
 	if not location['shape']:
