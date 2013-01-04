@@ -5,11 +5,10 @@
 #
 #
 
-from pymongo import *
-from datetime import *
+import datetime as dt
 import EventTracker_AF as et
-import json
-import cherrypy
+import DatabaseInterface as dbi
+import cherrypy, jason
 
 
 date_counter = 0
@@ -30,13 +29,17 @@ class Server(object):
 		print event_start_date
 		print event_end_date
 		
-		connection = Connection(host = 'hamm.cse.tamu.edu')
-		db = connection.GeoTaggedTweets
-		T_index = db.TweetsCollection
-		print T_index.find_one()
+		DBI = dbi.DatabaseInterface(host='hamm.cse.tamu.edu')
+		
+		#connection = Connection(host = 'hamm.cse.tamu.edu')
+		#db = connection.GeoTaggedTweets
+		#T_index = db.TweetsCollection
+		#print T_index.find_one()
 		# Format {date: [tweet1, tweet2, ...], ...} 
 		desired_tweets = {}
-		results = T_index.find({'$and':[{'date' : {'$gte': event_start_date}}, {'date' : {'$lt': event_end_date}}, {"bound":1}]})
+		#start_time=None, end_time=None, bound=utils.USA, query=None
+		# NOTE: query by time periods in the time span and stucture accordingly
+		results = DBI.queryTweets(start_time=event_start_date, end_time = event_end_date)
 		print "Results returned: ",
 		#while results:
 		print results.count(with_limit_and_skip=True)
@@ -51,7 +54,7 @@ class Server(object):
 		# Structure will be a 2D array, first dimension is divided by day and the 
 		# second is divided by event
 		# Structure {date: [event, ...], ...}
-		events = et.FindEvents(results, db)
+		events = et.FindEvents(results)
 		
 		data = {}
 		data['events'] = []

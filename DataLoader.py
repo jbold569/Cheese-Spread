@@ -15,7 +15,7 @@ class DataLoader():
 		self.filenames.sort(key=lambda filename:utils.parseTimePeriod(filename)) 
 		# Used to handle entropy
 		self.keywordStats = []
-		
+		self.initial_time_period = None
 		if index:
 			self.DBI.index()
 			
@@ -23,15 +23,13 @@ class DataLoader():
 		# This will be used for entropy
 		keywordStats = []
 		
-		time_period_seeded = False
-		
 		# These variables are persistant through different files due to overlap
 		# Time Period Stats Object
 		tpsObj = None
-		# Will be based off the first tweet
-		time_period = None
-		# Maximum size of 1000
+		# Maximum size of 1000 tweets
 		tweets = []	
+		
+		time_period = None
 		
 		for filename in self.filenames:
 			print "Loading: " + filename
@@ -46,11 +44,11 @@ class DataLoader():
 				probe.StartTiming("LoadedTweets")
 				try:
 					tweetObj = Tweet(json.loads(line))
-					if not time_period_seeded:
-						time_period = tweetObj.date
-						time_period_seeded = True			
+					if not self.initial_time_period:
+						self.initial_time_period = utils.determineTimePeriod(tweetObj.date)
+						time_period = self.initial_time_period
 						print "\nStarting time period at: ",
-						print time_period
+						print self.initial_time_period
 						
 					if out == -1:
 						out+=1
@@ -58,7 +56,8 @@ class DataLoader():
 						print tweetObj.date
 				except ValueError as e:
 					print e
-				
+				probe.StopTiming("LoadedTweets")
+					
 				if not utils.inTimePeriod(time_period, tweetObj.date):
 					time_period = time_period + dt.timedelta(minutes=15)									
 					print "\nChanging time period to: ",
@@ -73,7 +72,6 @@ class DataLoader():
 					if len(tweets) == 1000:
 						DBI.insertToDatabase(tweets, "TweetsCollection")
 						tweets = []
-					probe.StopTiming("LoadedTweets")
 					tpsObj.incTweets()
 					last_date = tweetObj.date
 				else:
@@ -103,13 +101,24 @@ class DataLoader():
 			
 			# Handle Entropy
 			self.keywordStats.append((time_period, dKeywordStats))
-			if len(self.keywordStats) == 7:
-				print "Calculating Entropy"
-				self.updateEntropy()
+			#if len(self.keywordStats) == 7:
+			#	print "Calculating Entropy"
+			#	self.updateEntropy()
 				
 			# Close the file of tweets
 			file.close()
 	
+	def LoadStats():
+		'''if not utils.inTimePeriod(time_period, tweetObj.date):
+			time_period = time_period + dt.timedelta(minutes=15)									
+			print "\nChanging time period to: ",
+			print time_period
+			# Update Time Period Stats
+			self.DBI.updateDatabase(tpsObj, "TimePeriodStatsCollection")
+			tpsObj = TimePeriodStat(time_period, bound=utils.USA)
+		'''
+		pass
+		
 	def updateEntropy(self):
 		# middle time period
 		e_date = self.keywordStats[3][0]
