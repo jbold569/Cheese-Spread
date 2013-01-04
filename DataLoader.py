@@ -41,9 +41,10 @@ class DataLoader():
 			out = -1
 			last_date = None
 			for line in file:
+				tweetObj = None
 				probe.StartTiming("LoadedTweets")
 				try:
-					tweetObj = Tweet(json.loads(line))
+					tweetObj = Tweet(json.loads(line))			
 					if not self.initial_time_period:
 						self.initial_time_period = utils.determineTimePeriod(tweetObj.date)
 						time_period = self.initial_time_period
@@ -56,6 +57,7 @@ class DataLoader():
 						print tweetObj.date
 				except ValueError as e:
 					print e
+					continue
 				probe.StopTiming("LoadedTweets")
 					
 				if not utils.inTimePeriod(time_period, tweetObj.date):
@@ -70,7 +72,7 @@ class DataLoader():
 				if tweetObj.valid and tweetObj.bound == utils.USA:
 					tweets.append(tweetObj)
 					if len(tweets) == 1000:
-						DBI.insertToDatabase(tweets, "TweetsCollection")
+						self.DBI.insertToDatabase(tweets, "TweetsCollection")
 						tweets = []
 					tpsObj.incTweets()
 					last_date = tweetObj.date
@@ -91,7 +93,6 @@ class DataLoader():
 						dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
 			
-			print "Number of tweets loaded from file: " + str(tpsObj.total_tweets)
 			print "Date of last tweet in file: ",
 			print last_date
 			print "Total keywords parsed: " + str(len(dKeywordStats))
