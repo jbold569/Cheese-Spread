@@ -1,12 +1,12 @@
 from sklearn.cluster import affinity_propagation, k_means
-import json
+import json, utils
 import datetime as dt
 import numpy as np
+import DatabaseInterface as dbi
 		
 EVENT_ID = 1000000
 DIMENSION = 100
 ORIGIN = np.ones(DIMENSION)/DIMENSION**0.5
-database = None
 alpha, beta, gamma = 0.5, 0.5, 0.0 # tf-idf, poh, entro
 
 class Event:
@@ -135,15 +135,14 @@ def cluster(vecs):
 		events[i].calculateCentroid()
 	return events
 			
-def getStats(word, date, totals):
-	global database
-	occurrences, = database['KeywordStatsCollection'].find({'$and': [{"date": date}, {"keyword": word}, {"bound":1}]})
+def getStats(word, time_period, time_period_stat):
+	keyword_stat, = dbi.queryKeywordStats(time_period=time_period, keyword=word}, {"bound":1}]})
 	from math import log10
-	df = float(occurrences['df'])/totals['total_tweets']
-	tf = occurrences['tf']
-	tf_idf = tf/totals['total_keywords']*log10(totals['total_tweets']/df)
-	poh = float(occurrences['poh'])
-	tfs = occurrences['entropy']
+	df = float(keyword_stat['doc_freq'])/time_period_stat['total_tweets']
+	tf = keyword_stat['term_freq']
+	tf_idf = tf/time_period_stat['total_keywords']*log10(time_period_stat['total_tweets']/df)
+	poh = float(keyword_stat['poh'])
+	tfs = keyword_stat['entropy']
 	
 	# If there isn't enough information to calculate the entropy 
 	if len(tfs) < 7:
@@ -162,27 +161,27 @@ def getStats(word, date, totals):
 		return tf_idf, poh, entro
 			
 def getTopicalWords(date_tweet_pairs):
-	global database, alpha, beta, gamma
+	global alpha, beta, gamma
 	
-	# Structure {date: {word1: quality , word2: quality , ...}, ...}
+	# Structure {time_period: {word1: quality , word2: quality , ...}, ...}
 	term_qualities = {}
 	print "Calculating metrics..."
-	for date in date_tweet_pairs.keys():
+	for time_period in date_tweet_pairs.keys():
 		print "Calculating metrics for: ",
-		print date
-		term_qualities[date] = []
+		print time_period
+		term_qualities[time_period] = []
 		keywords_set = []
 		print "Creating keyword set..."
-		results = database['KeywordStatsCollection'].find({"$and":[{'date': date}, {"bound":1}]})
+		results = dbi.queryKeywordStats(query={'$and': [{"time_period": time_period}, {"bound":utils.USA}]})
 		for result in results:
 			keywords_set.append(result['keyword'])
 		print "Done creating set.\n"
 		
 		total_entropy = 0.0
-		totals, = database['TimePeriodStatsCollection'].find({"$and":[{"date": date}, {"bound":1}]})
+		time_period_stat, = dbi.queryTimePeriodStats(time_period=time_period)
 		for word in keywords_set:
-			idf,poh,entro = getStats(word, date, totals)
-			term_qualities[date].append((word, alpha*idf+beta*poh+gamma*entro)) 
+			idf,poh,entro = getStats(word, time_period, time_period_stat)
+			term_qualities[time_period].append((word, alpha*idf+beta*poh+gamma*entro)) 
 	
 	print "Done calculating metrics.\n"
 	file = open("Stats", 'w')
@@ -192,10 +191,10 @@ def getTopicalWords(date_tweet_pairs):
 	file.write(json.dumps(temp, sort_keys=True, indent=4))
 	file.close()
 	
-	# Structure {date: [word1, word2, ...], ...}
+	# Structure {time_period: [word1, word2, ...], ...}
 	topicalwords = {}
-	for date, word_quality_pairs in term_qualities.items():
-		topicalwords[date] =sorted(word_quality_pairs, key=lambda pair: pair[1],  reverse=True)[:DIMENSION]
+	for time_period, word_quality_pairs in term_qualities.items():
+		topicalwords[time_period] =sorted(word_quality_pairs, key=lambda pair: pair[1],  reverse=True)[:DIMENSION]
 	
 	return topicalwords		
 
@@ -203,12 +202,12 @@ def getDocVectors(topicalwords, tweets):
 	global DIMENSION
 	# Dictionary that represents the tweets in the topicalword
 	# vector space
-	# Structure {date: { tweet.id: [normalized vector], ...}, ...}
+	# Structure {time_period: { tweet.id: [normalized vector], ...}, ...}
 	tweet_vectors = {}
-	for date, tWords in topicalwords.items():
-		tweet_vectors[date] = {}
-		#print date
-		for id, tweet in tweets[date].iteritems():
+	for time_period, tWords in topicalwords.items():
+		tweet_vectors[time_period] = {}
+		#print time_period
+		for id, tweet in tweets[time_period].iteritems():
 			vec = np.zeros(DIMENSION)
 			total = 0.0
 			zero_vec = True
@@ -227,15 +226,13 @@ def getDocVectors(topicalwords, tweets):
 			mag = np.linalg.norm(vec)
 			# Normalize the vector
 			if mag == 0:
-				tweet_vectors[date][id] = list(vec)
+				tweet_vectors[time_period][id] = list(vec)
 			else:
-				tweet_vectors[date][id] = list(vec/mag)
+				tweet_vectors[time_period][id] = list(vec/mag)
 	return tweet_vectors
 	
-def FindEvents(tweets, db):
-	global database
-	
-	# Structure of ordered_tweets {date: {_id:tweet1,..}, ...} 
+def FindEvents(tweets):
+	# Structure of ordered_tweets {time_period: {_id:tweet1,..}, ...} 
 	ordered_tweets = {}
 	for tweet in tweets:		
 			day = dt.datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day, 4, 18)
@@ -243,10 +240,9 @@ def FindEvents(tweets, db):
 				ordered_tweets[day][tweet['_id']] = tweet
 			except KeyError:
 				ordered_tweets[day] = {}
-				ordered_tweets[day][tweet['_id']] = tweet
-	database  = db
+				ordered_tweets[day][tweet['_id']] = tweet	
 	
-	# Structure {date: [word1, word2, ...], ...}
+	# Structure {time_period: [word1, word2, ...], ...}
 	topicalwords = getTopicalWords(ordered_tweets)
 	# output the topicalwords to a file
 	file = open("Topicalwords", 'w')
@@ -256,7 +252,7 @@ def FindEvents(tweets, db):
 	file.write(json.dumps(temp, sort_keys=True, indent=4))
 	file.close()
 	
-	# Structure {date: { tweet.id: [normalized vector], ...}, ...}
+	# Structure {time_period: { tweet.id: [normalized vector], ...}, ...}
 	doc_vectors = getDocVectors(topicalwords, ordered_tweets)
 	file = open("Vectors", 'w')
 	temp = {}
@@ -265,15 +261,15 @@ def FindEvents(tweets, db):
 	file.write(json.dumps(temp, sort_keys=True, indent=4))
 	file.close()
 	
-	# Structure  {date: [Events, ...], ...}
+	# Structure  {time_period: [Events, ...], ...}
 	events = {}
 	file = open("Events", 'w')
 	# iterate through the dictionary and cluster for every day
-	for date, vectors in doc_vectors.items():
-		events[date] = cluster(vectors)
-		file.write(str(date) + ": \n")
-		for event in events[date]:
-			event.loadTweets(ordered_tweets[date])
+	for time_period, vectors in doc_vectors.items():
+		events[time_period] = cluster(vectors)
+		file.write(str(time_period) + ": \n")
+		for event in events[time_period]:
+			event.loadTweets(ordered_tweets[time_period])
 			file.write(str(event) + "\n\n")
 	file.close()
 	return events

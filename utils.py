@@ -13,8 +13,14 @@ def parseTimePeriod(filename):
 	return (dt.datetime(date[0], date[1], date[2], time[0], time[1]) + dt.timedelta(hours=5, minutes=10))
 
 def inTimePeriod(time_period, date):
-	return date < time_period + dt.timedelta(minutes=15)
-		
+	return date < time_period + dt.timedelta(minutes=15)	
+	#return time_period <= date and date < time_period + dt.datetime(minutes=15)
+
+	
+# Determines the appropriate time period to begin loading tweets
+def determineTimePeriod(tweet_date):
+	return tweet_date.replace(minute=15*(int(tweet_date.minutes/15)), second=0)
+
 def assignBounds(location):
 	if not location['shape']:
 		lat = location['lat']
