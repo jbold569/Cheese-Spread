@@ -136,7 +136,7 @@ def cluster(vecs):
 	return events
 			
 def getStats(word, time_period, time_period_stat):
-	keyword_stat, = dbi.queryKeywordStats(time_period=time_period, keyword=word}, {"bound":1}]})
+	keyword_stat, = dbi.queryKeywordStats(time_period=time_period, keyword=word)
 	from math import log10
 	df = float(keyword_stat['doc_freq'])/time_period_stat['total_tweets']
 	tf = keyword_stat['term_freq']

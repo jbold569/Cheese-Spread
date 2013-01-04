@@ -8,7 +8,7 @@
 import datetime as dt
 import EventTracker_AF as et
 import DatabaseInterface as dbi
-import cherrypy, jason
+import cherrypy, json
 
 
 date_counter = 0
@@ -22,9 +22,9 @@ class Server(object):
 		start  = startDate
 		end = endDate
 		tokens = start.split('-')
-		event_start_date = datetime(2012, 3, 28, 9, 18)
+		event_start_date = dt.datetime(2012, 3, 28, 9, 30)
 		tokens = end.split('-')
-		event_end_date = datetime(2012, 3, 28, 9, 18+15)
+		event_end_date = dt.datetime(2012, 3, 28, 9, 30+15)
 		# Mongo sequence
 		print event_start_date
 		print event_end_date
