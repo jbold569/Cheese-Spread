@@ -181,7 +181,7 @@ function Query() {
 	console.log(QueryEndDate);
 	
 	$.ajax("http://localhost:8080/QueryEvents/"+QueryStartDate+"/"+QueryEndDate,{
-		timeout:150000,
+		timeout:15000000,
 		success: function(data) {
 			console.log(data);
 			LoadEvents(data.events);
@@ -232,7 +232,7 @@ function Initialize() {
 	$("#endDate").datepicker({dateFormat: "dd-mm-yy"});
 	var myOptions = {
 		center: new google.maps.LatLng( 39, -98),
-		zoom: 3,
+		zoom: 4,
 		disableDefaultUI: true,
 		mapTypeId: google.maps.MapTypeId.ROADMAP
 	};

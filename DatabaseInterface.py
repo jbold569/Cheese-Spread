@@ -12,7 +12,7 @@ class DatabaseInterface():
 		return self.db['KeywordStatsCollection'].find(query)
 	
 	def queryTweets(self, start_time=None, end_time=None, bound=utils.USA, query=None):
-		if not query: query = {'$and':[{'date' : {'$gte': start_date}}, {'date' : {'$lte': event_end_date}}, {"bound":bound}]}
+		if not query: query = {'$and':[{'date' : {'$gte': start_time}}, {'date' : {'$lt': end_time}}, {"bound":bound}]}
 		return self.db['TweetsCollection'].find(query)
 	
 	def queryTimePeriodStats(self, time_period=None, bound=utils.USA, query=None):

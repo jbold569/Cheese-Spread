@@ -22,9 +22,9 @@ class Server(object):
 		start  = startDate
 		end = endDate
 		tokens = start.split('-')
-		event_start_date = dt.datetime(2012, 3, 28, 9, 30)
+		event_start_date = dt.datetime(2012, 5, 1, 7, 45)
 		tokens = end.split('-')
-		event_end_date = dt.datetime(2012, 3, 28, 9, 30+15)
+		event_end_date = dt.datetime(2012, 5, 1, 7, 45)+dt.timedelta(minutes=15)
 		# Mongo sequence
 		print event_start_date
 		print event_end_date
@@ -67,7 +67,7 @@ class Server(object):
 		
 		#print data
 		obj = json.dumps( data, allow_nan=False, default=date_handler)
-		print obj
+		#print obj
 		return obj
 		
 def date_handler(obj):
