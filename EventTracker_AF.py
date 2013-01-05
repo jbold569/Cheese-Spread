@@ -7,7 +7,8 @@ import DatabaseInterface as dbi
 EVENT_ID = 1000000
 DIMENSION = 100
 ORIGIN = np.ones(DIMENSION)/DIMENSION**0.5
-alpha, beta, gamma = 0.5, 0.5, 0.0 # tf-idf, poh, entro
+alpha, beta, gamma = 0.8, 0.2, 0.0 # tf-idf, poh, entro
+DBI = dbi.DatabaseInterface(host='hamm.cse.tamu.edu')
 
 class Event:
 	def __init__(self, id, centroid):
@@ -120,7 +121,7 @@ def cluster(vecs):
 	for D, i in zip(vecs.values(), range(len(vecs))):
 		for d, j in zip(vecs.values(), range(len(vecs))):
 			s[i][j] = -sim(D,d)
-	centroids, labels, intertia = k_means(X=s, n_clusters=10)
+	centroids, labels, intertia = k_means(X=s, n_clusters=20)
 	#cluster_centers, labels = affinity_propagation(S=s, preference=-0.0)
 	cluster_tweet_pair = zip(vecs.keys(), labels)
 
@@ -136,10 +137,12 @@ def cluster(vecs):
 	return events
 			
 def getStats(word, time_period, time_period_stat):
-	keyword_stat, = dbi.queryKeywordStats(time_period=time_period, keyword=word)
+	global DBI
+	
+	keyword_stat = DBI.queryKeywordStats(time_period=time_period, keyword=word)[0]
 	from math import log10
-	df = float(keyword_stat['doc_freq'])/time_period_stat['total_tweets']
-	tf = keyword_stat['term_freq']
+	df = float(keyword_stat['df'])/time_period_stat['total_tweets']
+	tf = keyword_stat['tf']
 	tf_idf = tf/time_period_stat['total_keywords']*log10(time_period_stat['total_tweets']/df)
 	poh = float(keyword_stat['poh'])
 	tfs = keyword_stat['entropy']
@@ -155,13 +158,17 @@ def getStats(word, time_period, time_period_stat):
 		for tf in tfs:
 			total_t += tf
 		for tf in tfs:
-			prob_i = tf/total_t
+			prob_i = 0
+			try:
+				prob_i = tf/total_t
+			except ZeroDivisionError:
+				pass
 			entro += prob_i*log10(prob_i+1)
 		
 		return tf_idf, poh, entro
 			
 def getTopicalWords(date_tweet_pairs):
-	global alpha, beta, gamma
+	global alpha, beta, gamma, DBI
 	
 	# Structure {time_period: {word1: quality , word2: quality , ...}, ...}
 	term_qualities = {}
@@ -172,13 +179,13 @@ def getTopicalWords(date_tweet_pairs):
 		term_qualities[time_period] = []
 		keywords_set = []
 		print "Creating keyword set..."
-		results = dbi.queryKeywordStats(query={'$and': [{"time_period": time_period}, {"bound":utils.USA}]})
+		results = DBI.queryKeywordStats(query={'$and': [{"time_period": time_period}, {"bound":utils.USA}]})
 		for result in results:
 			keywords_set.append(result['keyword'])
 		print "Done creating set.\n"
 		
 		total_entropy = 0.0
-		time_period_stat, = dbi.queryTimePeriodStats(time_period=time_period)
+		time_period_stat, = DBI.queryTimePeriodStats(time_period=time_period)
 		for word in keywords_set:
 			idf,poh,entro = getStats(word, time_period, time_period_stat)
 			term_qualities[time_period].append((word, alpha*idf+beta*poh+gamma*entro)) 
@@ -220,8 +227,8 @@ def getDocVectors(topicalwords, tweets):
 				total += val**2
 				vec[i] = val
 			#used to clean up noise....
-			#if zero_vec:
-			#	continue
+			if zero_vec:
+				continue
 			# Determine the magnitude of the vector
 			mag = np.linalg.norm(vec)
 			# Normalize the vector
@@ -235,7 +242,7 @@ def FindEvents(tweets):
 	# Structure of ordered_tweets {time_period: {_id:tweet1,..}, ...} 
 	ordered_tweets = {}
 	for tweet in tweets:		
-			day = dt.datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day, 4, 18)
+			day = dt.datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day, 7, 45)
 			try:
 				ordered_tweets[day][tweet['_id']] = tweet
 			except KeyError:
