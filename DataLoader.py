@@ -1,4 +1,5 @@
 from DataObjects import *
+from guppy import hpy
 import DatabaseInterface as dbi
 import datetime as dt
 import utils, json, gzip, os, sys, Probe
@@ -13,16 +14,14 @@ class DataLoader():
 				self.filenames.append(os.path.join(path, file))
 		self.DBI = dbi.DatabaseInterface()
 		self.filenames.sort(key=lambda filename:utils.parseTimePeriod(filename)) 
-		# Used to handle entropy
-		self.keywordStats = []
+		# Entropy
+		#self.keyword_stats = []
 		self.initial_time_period = None
+		self.h = hpy()
 		if index:
 			self.DBI.index()
 			
 	def loadTweets(self):
-		# This will be used for entropy
-		keywordStats = []
-		
 		# These variables are persistant through different files due to overlap
 		# Time Period Stats Object
 		tpsObj = None
@@ -38,7 +37,6 @@ class DataLoader():
 			# Dictionary of Keyword Stats
 			# Structure { keyword: keywordObj, ...}
 			dKeywordStats = {}
-			out = -1
 			last_date = None
 			for line in file:
 				tweetObj = None
@@ -53,11 +51,6 @@ class DataLoader():
 						tpsObj = TimePeriodStat(time_period, bound=utils.USA)
 						print "\nStarting time period at: ",
 						print self.initial_time_period
-						
-					if out == -1:
-						out+=1
-						print "First tweet: ",
-						print tweetObj.date
 				except ValueError as e:
 					print e
 					continue
@@ -92,7 +85,7 @@ class DataLoader():
 					try:
 						dKeywordStats[word].incFreqs(term_freq)
 					except KeyError:
-						dKeywordStats[word] = KeywordStat(word, time_period, bound=utils.USA, poh = poh)
+						dKeywordStats[word] = KeywordStat(word, time_period, bound=tweetObj.bound, poh = poh)
 						dKeywordStats[word].incFreqs(term_freq)
 						tpsObj.incKeywords()
 			
@@ -104,13 +97,15 @@ class DataLoader():
 			self.DBI.insertToDatabase(dKeywordStats.values(), "KeywordStatsCollection")
 			
 			# Handle Entropy
-			self.keywordStats.append((time_period, dKeywordStats))
+			#self.keywordStats.append((time_period, dKeywordStats))
 			#if len(self.keywordStats) == 7:
 			#	print "Calculating Entropy"
 			#	self.updateEntropy()
 				
 			# Close the file of tweets
 			file.close()
+			#utils.print_top_10()
+			print self.h.heap()
 	
 	def LoadStats():
 		'''if not utils.inTimePeriod(time_period, tweetObj.date):

@@ -1,8 +1,27 @@
-import re,string
+import re,string,sys,types
 import datetime as dt
 	
 UNK, USA = range(2)
 months = {'Jan': 1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
+
+def get_refcounts():
+	d = {}
+	sys.modules
+	# collect all classes
+	for m in sys.modules.values():
+		for sym in dir(m):
+			o = getattr (m, sym)
+			if type(o) is types.ClassType:
+				d[o] = sys.getrefcount (o)
+	# sort by refcount
+	pairs = map (lambda x: (x[1],x[0]), d.items())
+	pairs.sort()
+	pairs.reverse()
+	return pairs
+
+def print_top_10():
+	for n, c in get_refcounts()[:10]:
+		print '%10d %s' % (n, c.__name__)
 
 # Parses the time period from the filename
 def parseTimePeriod(filename):
