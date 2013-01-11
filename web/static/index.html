@@ -4,11 +4,12 @@
 	<head>
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 		
-		<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
+		<link type="text/css" href="css/ui-lightness/jquery-ui-1.9.2.custom.css" rel="stylesheet" />
 		<link type="text/css" href="css/style.css" rel="stylesheet" />
-		<script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
-		<script type="text/javascript" src="js/jquery-ui-1.8.21.custom.min.js"></script>
-		
+		<script type="text/javascript" src="js/jquery-1.8.3.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.9.2.custom.min.js"></script>
+		<script type="text/javascript" src="js/globalize.js"></script>
+		<script type="text/javascript" src="js/cultures/globalize.cultures.js"></script>
 		
 		<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyBMga9zfxgAlZmqG6umMJajaJ7bt8fbDeE&sensor=false"></script>
 		<style type="text/css">
@@ -22,14 +23,22 @@
 			<div id="UserInput">
 				<form>	
 					<center>
-						Start Date: <input type="text" name="startDate" id="startDate" />
-						&nbsp End Date: <input type="text" name="endDate" id="endDate" />
-						&nbsp <input type="button" value="Search" id="search" /><br />
+						<label for="startDate"> Start Date: </label>
+						<input size="10" type="text" name="startDate" id="startDate" /> 
+						<label for="startTime"> Time: </label>
+						<input size="10" type="spinner" name="startTime" id="startTime"/>
+						&nbsp
+						<label for="endDate"> End Date: </label>
+						<input size="10" type="text" name="endDate" id="endDate" />
+						<label for="endTime"> Time: </label>
+						<input size="10" type="spinner" name="endTime" id="endTime"/>
+						
+						<input type="button" value="Search" id="search" /><br />
 					</center>
 				</form>
 			</div>
 			
-			<div id="map" style="margin:0 auto; width:800px; height:500px">
+			<div id="map">
 				<script src="js/map.js"></script>
 			</div>
 			

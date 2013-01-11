@@ -5,7 +5,7 @@ $("input#search").click(Query);
 var Events = new Array();
 var COLORS = ["red", "blue", "yellow", "green", "black"];
 var legend_counter = 0;
-var Map, StartDate, EndDate, FilterStartDate, FilterEndDate, slider, Span;
+var current_event, Map, StartDate, EndDate, FilterStartDate, FilterEndDate, slider, Span;
 
 function daysBetween ( date1, date2 ) {
 	//Get 1 day in milliseconds
@@ -83,9 +83,25 @@ function ClearMap() {
 // raw_data is a list of 5 EventObjects
 function LoadEvents(events) {
 	//console.log(events)
+	Events = new Array();
 	for(i in events) {
 		Events.push(new EventObject(events[i], COLORS[i]));
 	}
+}
+
+// This function will populate the summary field with tweets and cluster stats
+function PopulateSummary(eventObj) {
+	var event_stats = "<div id=\"event_stats\"><p>Size of event: " + eventObj.event.tweets.length + "<br>";
+	var tweets = "<div id=\"tweet\">";
+	for(i=0; i<eventObj.event.tweets.length; i++) {
+		var tweetObj = eventObj.event.tweets[i];
+		tweets = tweets + "<p>User ID: " + tweetObj._id + "<br>" + tweetObj.contents + "<br> Similarity to event centroid: " + eventObj.event.similarities[i]+"<br></p>";	
+	}
+	tweets = tweets  + "</div>";
+	event_stats = event_stats + tweets;
+	
+	event_stats = event_stats + "</p></div>"
+	$("#summaries").html(event_stats)
 }
 
 // Converted******************************************************
@@ -112,27 +128,25 @@ function PopulateLegend() {
 	$("input#next").click(function () {
 		ClearMap();
 		// Get the next 5 events from the server
+		RequestEvents(1);
 		PopulateLegend();
 	});
 	
 	$("input#previous").click(function () {
 		ClearMap();
 		// Get the previous 5 events from the server
+		RequestEvents(-1);
 		PopulateLegend();
 	});
 	
 	$("input:radio").click(function () {
-		var event = $(this).attr('value');
+		ClearMap();
+		current_event = $(this).attr('value');
 		for(i=0; i<Events.length; i++) {
-			if(Events[i].event.id == event) {
-				if(Events[i].visible == true) {
-					console.log(Events[i].event.id+" is invisible!");
-					Events[i].visible = false;
-				}
-				else {
-					console.log(Events[i].event.id+" is visible!");
-					Events[i].visible = true;
-				}
+			if(Events[i].event.id == current_event) {
+				console.log(Events[i].event.id+" is visible!");
+				Events[i].visible = true;
+				PopulateSummary(Events[i]);
 			}
 		}
 		Redraw();
@@ -168,19 +182,22 @@ function Query() {
 	// This will be a list of 5 events from the first date in the query span
 	Events = new Array();
 	var QueryStartDate = $("input#startDate").val();
+	var QueryStartTime = $("input#startTime").val().toString();
 	var QueryEndDate = $("input#endDate").val();
+	var QueryEndTime = $("input#endTime").val().toString();
+	var date = QueryStartDate.split("-");
+	var time = QueryStartTime.split(":");
+	StartDate = new Date(parseInt(date[2]), parseInt(date[1])-1, parseInt(date[0]), parseInt(time[0]), parseInt(time[1]));
+	FilterStartDate = new Date(parseInt(date[2]), parseInt(date[1])-1, parseInt(date[0]), parseInt(time[0]), parseInt(time[1]));
 	
-	var tokens = QueryStartDate.split("-");
-	StartDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
-	FilterStartDate = new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
+	var date = QueryEndDate.split("-");
+	var time = QueryEndTime.split(":");
+	FilterEndDate =  new Date(parseInt(date[2]), parseInt(date[1])-1, parseInt(date[0]), parseInt(time[0]), parseInt(time[1]));
 	
-	var tokens = QueryEndDate.split("-");
-	FilterEndDate =  new Date(parseInt(tokens[2]), parseInt(tokens[1])-1, parseInt(tokens[0]));
+	console.log(FilterStartDate);
+	console.log(FilterEndDate);
 	
-	console.log(QueryStartDate);
-	console.log(QueryEndDate);
-	
-	$.ajax("http://localhost:8080/QueryEvents/"+QueryStartDate+"/"+QueryEndDate,{
+	$.ajax("http://localhost:8080/QueryEvents/"+QueryStartDate+"/"+QueryStartTime+"/"+QueryEndDate+"/"+QueryEndTime,{
 		timeout:15000000,
 		success: function(data) {
 			console.log(data);
@@ -223,15 +240,74 @@ function Query() {
 			//CreateSlider();
 		}
 	});*/
-	console.log("What the heck");
 }
 
+function RequestEvents(dir) {
+	$.ajax("http://localhost:8080/RequestEvents/"+dir,{
+		timeout:1500000000000,
+		success: function(data) {
+			console.log(data);
+			LoadEvents(data.events);
+			if(Events.length == 0)
+				alert("No results found");
+			else {
+				PopulateLegend();
+				//CreateSlider();
+			}
+		},
+		error: function(jqXHR,textStatus,errorThrown) {
+			var error;
+			if(textStatus=='error') {
+				if(jqXHR.status==0)
+					error = "Could not connect to server. Try running ./serve.py.";
+				else
+					error = jqXHR.status+" : "+errorThrown;
+			} else {
+				error = textStatus;
+				console.log(error);
+			}
+
+			//var alert = alert_template({error:error});
+			//console.log(alert);
+		},
+		dataType: 'json',
+	});
+}
 
 function Initialize() {
 	$("#startDate").datepicker({dateFormat: "dd-mm-yy"});
 	$("#endDate").datepicker({dateFormat: "dd-mm-yy"});
+	$.widget( "ui.timespinner", $.ui.spinner, {
+		options: {
+		  // 15 minutes
+		  step: 15*60 * 1000,
+		  // hours
+		  page: 4
+		},
+ 
+		_parse: function( value ) {
+		  if ( typeof value === "string" ) {
+			// already a timestamp
+			if ( Number( value ) == value ) {
+			  return Number( value );
+			}
+			return +Globalize.parseDate( value );
+		  }
+		  return value;
+		},
+ 
+		_format: function( value ) {
+		  return Globalize.format( new Date(value), "t" );
+		}
+	});
+	Globalize.culture('de-DE');
+	$("#startTime").timespinner();
+	$("#endTime").timespinner();
+	$( "#startTime" ).timespinner( "value", "00:00");
+	$( "#endTime" ).timespinner( "value", "00:00");
+	
 	var myOptions = {
-		center: new google.maps.LatLng( 39, -98),
+		center: new google.maps.LatLng( 38, -95),
 		zoom: 4,
 		disableDefaultUI: true,
 		mapTypeId: google.maps.MapTypeId.ROADMAP

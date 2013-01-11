@@ -17,14 +17,31 @@ class Server(object):
 	results = []
 	
 	@cherrypy.expose
-	def QueryEvents(self, startDate, endDate):
+	def RequestEvents(self, dir):
+		global event_counter
+		event_counter += int(dir)
+		if event_counter < 0:
+			event_counter = 0
+		if event_counter > len(self.events):
+			event_counter = len(self.events)
+		
+		data = {}
+		data['events'] = []
+		for i in range(5*event_counter,5*event_counter+5):
+			data['events'].append(self.events.values()[date_counter][i].toDictionary())
+		obj = json.dumps( data, default=date_handler)
+		return obj
+			
+	@cherrypy.expose
+	def QueryEvents(self, startDate, startTime, endDate, endTime):
 		global date_counter, event_counter
-		start  = startDate
-		end = endDate
-		tokens = start.split('-')
-		event_start_date = dt.datetime(2012, 5, 1, 7, 45)
-		tokens = end.split('-')
-		event_end_date = dt.datetime(2012, 5, 1, 7, 45)+dt.timedelta(minutes=15)
+		date = startDate.split('-')
+		time = startTime.split(':')
+		
+		event_start_date = dt.datetime(int(date[2]), int(date[1]), int(date[0]), int(time[0]), int(time[1]))
+		date = endDate.split('-')
+		time = endTime.split(':')
+		event_end_date = dt.datetime(int(date[2]), int(date[1]), int(date[0]), int(time[0]), int(time[1]))
 		# Mongo sequence
 		print event_start_date
 		print event_end_date
@@ -54,19 +71,19 @@ class Server(object):
 		# Structure will be a 2D array, first dimension is divided by day and the 
 		# second is divided by event
 		# Structure {date: [event, ...], ...}
-		events = et.FindEvents(results)
+		self.events = et.FindEvents(results)
 		
 		data = {}
 		data['events'] = []
 		for i in range(5*event_counter,5*event_counter+5):
-			data['events'].append(events.values()[date_counter][i].toDictionary())
+			data['events'].append(self.events.values()[date_counter][i].toDictionary())
 		# The server only needs 5 events at a time, no use in sending the whole data structure
 		# inputs from the client
 		# 1) page of events to view
 		# 2) date within the query span
 		
 		#print data
-		obj = json.dumps( data, allow_nan=False, default=date_handler)
+		obj = json.dumps( data, default=date_handler)
 		#print obj
 		return obj
 		

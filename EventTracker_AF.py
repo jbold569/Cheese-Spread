@@ -7,7 +7,7 @@ import DatabaseInterface as dbi
 EVENT_ID = 1000000
 DIMENSION = 100
 ORIGIN = np.ones(DIMENSION)/DIMENSION**0.5
-alpha, beta, gamma = 0.8, 0.2, 0.0 # tf-idf, poh, entro
+alpha, beta, gamma = 0.0, 1.0, 0.0 # tf-idf, poh, entro
 DBI = dbi.DatabaseInterface(host='hamm.cse.tamu.edu')
 
 class Event:
@@ -19,7 +19,7 @@ class Event:
 		self.std_dev = 0
 		# ID vector pairs (id, vec)
 		self.tweet_stats = []
-		# Tweet object vector pairs [object, vec, simularity]
+		# Tweet object, vector, simularity tuple (object, vec, simularity)
 		self.tweets = []
 		self.parent = 0
 	
@@ -37,18 +37,18 @@ class Event:
 	
 	
 	def toDictionary(self):
-		simularities = []
+		similarities = []
 		tweets = []
 		for tweet, vec, sim in self.tweets:
-			simularities.append(sim)
+			similarities.append(sim)
 			tweets.append(tweet)
 		temp_dict = {
-			#'centroid': list(self.centroid[np.isnan(self.centroid)]="NaN"),
+			'centroid': str(['%.6f' % elem for elem in self.centroid]),
 			'id': self.id,
 			'quality': self.quality,
-			#'std_dev': list(self.std_dev[np.isnan(self.std_dev)]="NaN"),
+			'std_dev': str([ '%.6f' % elem for elem in self.std_dev]),
 			'tweets': tweets,
-			#'simularities': list(np.array(simularities)[np.isnan(np.array(simularities))]="NaN"),
+			'similarities': ['%.6f' % elem for elem in similarities],
 			'parent_id': self.parent
 		}
 		return temp_dict
@@ -121,7 +121,7 @@ def cluster(vecs):
 	for D, i in zip(vecs.values(), range(len(vecs))):
 		for d, j in zip(vecs.values(), range(len(vecs))):
 			s[i][j] = -sim(D,d)
-	centroids, labels, intertia = k_means(X=s, n_clusters=20)
+	centroids, labels, intertia = k_means(X=s, n_clusters=10)
 	#cluster_centers, labels = affinity_propagation(S=s, preference=-0.0)
 	cluster_tweet_pair = zip(vecs.keys(), labels)
 

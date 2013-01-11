@@ -1,8 +1,20 @@
 html { background: #ededed; }
 
+#map {
+	margin:0 auto;
+	width:800px;
+	height:400px;
+}
+
 #page_wrap {
 	margin: 0 auto;
 	width: 800px;
+}
+
+#summaries {
+	width: 800px;
+	height: 250px;
+	overflow: scroll;
 }
 
 .filter0 { background: red; }
