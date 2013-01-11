@@ -15,7 +15,7 @@ class DataLoader():
 		self.DBI = dbi.DatabaseInterface()
 		self.filenames.sort(key=lambda filename:utils.parseTimePeriod(filename)) 
 		# Entropy
-		self.keyword_stats = []
+		self.keywordStats = []
 		self.initial_time_period = None
 		self.h = hpy()
 		if index:
