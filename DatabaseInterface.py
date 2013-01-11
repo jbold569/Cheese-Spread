@@ -37,7 +37,7 @@ class DatabaseInterface():
 			self.db[collection].insert(data)
 
 	def index(self):
-		self.db['KeywordStatsCollection'].ensure_index([('date',1), ('keywords',1), ("bound",1)], background=True)
-		self.db['TweetsCollection'].ensure_index([('date',1), ('keyword',1), ("bound",1)], background=True)
-		self.db['TimePeriodStatsCollection'].ensure_index([('date',1), ("bound",1)], background=True)
+		self.db['KeywordStatsCollection'].ensure_index([('time_period',1), ('keywords',1), ("bound",1)], background=True)
+		self.db['TweetsCollection'].ensure_index([('time_period',1), ('keyword',1), ("bound",1)], background=True)
+		self.db['TimePeriodStatsCollection'].ensure_index([('time_period',1), ("bound",1)], background=True)
 		

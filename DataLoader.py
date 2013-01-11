@@ -15,7 +15,7 @@ class DataLoader():
 		self.DBI = dbi.DatabaseInterface()
 		self.filenames.sort(key=lambda filename:utils.parseTimePeriod(filename)) 
 		# Entropy
-		#self.keyword_stats = []
+		self.keyword_stats = []
 		self.initial_time_period = None
 		self.h = hpy()
 		if index:
@@ -57,7 +57,7 @@ class DataLoader():
 				probe.StopTiming("LoadedTweets")
 					
 				if not utils.inTimePeriod(time_period, tweetObj.date):
-					time_period = time_period + dt.timedelta(minutes=15)									
+					time_period += dt.timedelta(minutes=15)									
 					print "\nChanging time period to: ",
 					print time_period
 					# Update Time Period Stats
@@ -97,10 +97,10 @@ class DataLoader():
 			self.DBI.insertToDatabase(dKeywordStats.values(), "KeywordStatsCollection")
 			
 			# Handle Entropy
-			#self.keywordStats.append((time_period, dKeywordStats))
-			#if len(self.keywordStats) == 7:
-			#	print "Calculating Entropy"
-			#	self.updateEntropy()
+			self.keywordStats.append((time_period, dKeywordStats))
+			if len(self.keywordStats) == 7:
+				print "Calculating Entropy"
+				self.updateEntropy()
 				
 			# Close the file of tweets
 			file.close()
