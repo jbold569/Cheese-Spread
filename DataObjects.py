@@ -28,7 +28,7 @@ class Tweet:
 			tokens = dTweet['created_at'].split(' ')
 			time = tokens[3].split(':')
 			self.date = dt.datetime(int(tokens[5]), utils.months[tokens[1]], int(tokens[2]), int(time[0]), int(time[1]), int(time[2]))
-			self.time_period = util.determineTimePeriod(self.date)
+			self.time_period = utils.determineTimePeriod(self.date)
 			self.valid = True
 
 			
