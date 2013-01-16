@@ -122,8 +122,10 @@ class TimePeriodStat:
 	def incHashtags(self, n=1):
 		self.total_hashtags += n
 	
-	def incTweets(self, n=1):
-		self.total_tweets += n
+	def incTweetStats(self, tweetObj):
+		self.total_tweets += 1
+		self.total_hashtags += len(tweetObj.hashtags)
+		self.total_keywords += len(tweetObj.keywords)
 		
 	def incKeywords(self, n=1):
 		self.total_keywords += n

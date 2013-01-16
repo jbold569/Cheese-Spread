@@ -7,7 +7,7 @@ import DatabaseInterface as dbi
 EVENT_ID = 1000000
 DIMENSION = 100
 ORIGIN = np.ones(DIMENSION)/DIMENSION**0.5
-alpha, beta, gamma = 0.0, 1.0, 0.0 # tf-idf, poh, entro
+alpha, beta, gamma = 0.5, 0.2, 0.3 # tf-idf, poh, entro
 DBI = dbi.DatabaseInterface(host='hamm.cse.tamu.edu')
 
 class Event:
@@ -242,12 +242,12 @@ def FindEvents(tweets):
 	# Structure of ordered_tweets {time_period: {_id:tweet1,..}, ...} 
 	ordered_tweets = {}
 	for tweet in tweets:		
-			day = dt.datetime(tweet['date'].year, tweet['date'].month, tweet['date'].day, 7, 45)
+			time_period = tweet['time_period']
 			try:
-				ordered_tweets[day][tweet['_id']] = tweet
+				ordered_tweets[time_period][tweet['_id']] = tweet
 			except KeyError:
-				ordered_tweets[day] = {}
-				ordered_tweets[day][tweet['_id']] = tweet	
+				ordered_tweets[time_period] = {}
+				ordered_tweets[time_period][tweet['_id']] = tweet	
 	
 	# Structure {time_period: [word1, word2, ...], ...}
 	topicalwords = getTopicalWords(ordered_tweets)

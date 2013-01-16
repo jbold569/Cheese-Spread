@@ -95,7 +95,7 @@ function PopulateSummary(eventObj) {
 	var tweets = "<div id=\"tweet\">";
 	for(i=0; i<eventObj.event.tweets.length; i++) {
 		var tweetObj = eventObj.event.tweets[i];
-		tweets = tweets + "<p>User ID: " + tweetObj._id + "<br>" + tweetObj.contents + "<br> Similarity to event centroid: " + eventObj.event.similarities[i]+"<br></p>";	
+		tweets = tweets + "<p>User ID: " + tweetObj.user + "<br>" + tweetObj.contents + "<br> Similarity to event centroid: " + eventObj.event.similarities[i]+"<br></p>";	
 	}
 	tweets = tweets  + "</div>";
 	event_stats = event_stats + tweets;
