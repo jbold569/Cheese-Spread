@@ -58,7 +58,7 @@ class DataLoader():
 					if not self.initial_time_period:
 						self.initial_time_period = tweetObj.time_period
 						tpsIndex.append(self.initial_time_period)
-						dTPSObj[self.initial_time_period] = TimePeriodStat(self.initial_time_period, bound=utils.USA)
+						dTPSObjs[self.initial_time_period] = TimePeriodStat(self.initial_time_period, bound=utils.USA)
 						print "\nStarting time period at: ",
 						print self.initial_time_period
 				except ValueError as e:
@@ -83,14 +83,14 @@ class DataLoader():
 					try:	
 						dTPSObj[tweetObj.time_period].incTweetStats(tweetObj)
 					except IndexError:
-						dTPSObj[tweetObj.time_period] = TimePeriodStat(tweetObj.time_period, bound=tweetObj.bound)
+						dTPSObjs[tweetObj.time_period] = TimePeriodStat(tweetObj.time_period, bound=tweetObj.bound)
 						tpsIndex.append(tweetObj.time_period)
 						if len(tpsIndex) == 3:
 							self.DBI.updateDatabase(dTPSObjs[tpsIndex[0]], "TimePeriodStatsCollection")
-							del dTPSObj[tweetObj.time_period]
+							del dTPSObjs[tweetObj.time_period]
 							tpsIndex.pop(0)
 							
-						dTPSObj[tweetObj.time_period].incTweetStats(tweetObj)
+						dTPSObjs[tweetObj.time_period].incTweetStats(tweetObj)
 						
 					if not tweetObj.time_period in unique_periods:
 						unique_periods.append(tweetObj.time_period)
