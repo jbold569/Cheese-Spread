@@ -41,8 +41,8 @@ class DataLoader():
 			# Dictionary of Keyword Stats
 			# Structure { keyword: keywordObj, ...}
 			dKeywordStats = {}
+			unique_periods = []
 			for line in file:
-				unique_periods = []
 				tweetObj = None
 				probe.StartTiming("LoadedTweets")
 				try:
@@ -81,15 +81,14 @@ class DataLoader():
 						self.DBI.insertToDatabase(tweets, "TweetsCollection")
 						tweets = []
 					try:	
-						dTPSObj[tweetObj.time_period].incTweetStats(tweetObj)
-					except IndexError:
+						dTPSObjs[tweetObj.time_period].incTweetStats(tweetObj)
+					except KeyError:
 						dTPSObjs[tweetObj.time_period] = TimePeriodStat(tweetObj.time_period, bound=tweetObj.bound)
 						tpsIndex.append(tweetObj.time_period)
 						if len(tpsIndex) == 3:
 							self.DBI.updateDatabase(dTPSObjs[tpsIndex[0]], "TimePeriodStatsCollection")
-							del dTPSObjs[tweetObj.time_period]
+							del dTPSObjs[tpsIndex[0]]
 							tpsIndex.pop(0)
-							
 						dTPSObjs[tweetObj.time_period].incTweetStats(tweetObj)
 						
 					if not tweetObj.time_period in unique_periods:
@@ -111,7 +110,7 @@ class DataLoader():
 				
 			# Update Keyword Statistics
 			self.DBI.insertToDatabase(dKeywordStats.values(), "KeywordStatsCollection")
-			print "Date of last tweet in file: ",
+			print "Time periods in file: ",
 			print unique_periods
 			print "Total keywords parsed: " + str(len(dKeywordStats))
 					
